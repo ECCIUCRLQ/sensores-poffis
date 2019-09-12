@@ -8,9 +8,11 @@ import string
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
 sock2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
-UDP_IP = "192.168.0.11" #"10.1.138.34"
-UDP_PORT = 5000
-sock2.bind((UDP_IP, 5005))
+UDP_IP = "192.168.0.11"			  # Destino
+UDP_PORT = 5000				  # Destino
+UDP_IP_CLIENT = "10.1.138.34"  		  # IP Cliente - espera respuesta del server
+UDP_PORT_SERVER_REPLY = 5005		  # Port en el que viene la respuesta del server
+#sock2.bind((UDP_IP_CLIENT, UDP_PORT_SERVER_REPLY))
 packer1 = struct.Struct('1s f 4s 1s 7s') #  Hacer casos de los datos segun tipo 
 packer2 = struct.Struct('1s f 4s 1s f') #  Hacer casos de los datos segun tipo 
 #bueyPack = struct.Struct('1s 4s')
