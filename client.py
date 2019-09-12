@@ -34,36 +34,36 @@ def sendPackage(sensorType, data, socket):
 	socket.sendto(packed_data, (UDP_IP, UDP_PORT))
 	return packed_data, randomID, True
 
+
+
 def main():
 	ridReceived = ''  
 	timeCommStart, timeRIDStart = time.time(), time.time()
 	lastSent, ridWanted, waitingReply = sendPackage(hex(0), "Carreta", sock) # tipo y data viene del sensor
 	while True:
-		if waitingReply == True:
-			data, addr = sock2.recvfrom(20)  # Para recibir Buey del receiver
-			unpackedData = packer1.unpack(data)
-			ridReceived = (unpackedData)[0].decode()
-			if ridReceived == ridWanted:
+		if waitingReply == True: 
+			if time.time() - timeRIDStart <= timeRIDLimit: # Si aún estoy dentro del tiempo.
+				data, addr = sock2.recvfrom(20)  
+				unpackedData = packer1.unpack(data)
+				ridReceived = (unpackedData)[0].decode()
 				print("Recibi buey:", unpackedData)
-				waitingReply = False #, serverReplied = False, True
-		else:
-			if waitingReply and time.time() - timeRIDStart >= timeRIDLimit: #timeout, no recibio RID
+				waitingReply = False 
+			else:  # Si sucede un timeout.
 				print("Random ID was not received. Resending last packet.") 
 				print(time.time() - timeRIDStart)
 				sock.sendto(lastSent, (UDP_IP, UDP_PORT)) # Ya esta empacado, no ocupa casos
 				timeCommStart, timeRIDStart = time.time(), time.time()
-				serverReplied = False #waitingReply, serverReplied = True, False
-			elif not waitingReply and time.time() - timeCommStart >= timeCommLimit: # Recibio RID, quitar segunda condicion para cuando ya este implementado con sensor y server
-				if ridReceived == ridWanted:    # Hay posibilidad de RID duplicados en Sender? Si no es el esperado reenvia y el control es en el receiver
-					print("Packet sent.")
-					print(time.time() - timeCommStart)
-					lastSent, ridWanted, waitingReply = sendPackage(hex(0) , "Carreta", sock) # tipo y data viene del sensor
-					timeCommStart, timeRIDStart = time.time(), time.time()
-				elif ridWanted != ridReceived: # Resend
-					print("Random ID did not match. Resending last packet.") #print(time.time() - timeACKStart)
-					sock.sendto(lastSent, (UDP_IP, UDP_PORT)) # ya esta empacado, no ocupa casos
-					timeCommStart, timeRIDStart = time.time(), time.time()
-					waitingReply = True #waitingReply, serverReplied = True, False
+		else:	
+			if ridReceived == ridWanted:    # Un paquete fue recibido, se verifica si es del deseado mediante el ACK. 
+				print("Packet sent.")
+				print(time.time() - timeCommStart)
+				lastSent, ridWanted, waitingReply = sendPackage(hex(0) , "Carreta", sock) # Tipo y data viene del sensor
+				timeCommStart, timeRIDStart = time.time(), time.time()
+			else:  # Recibe un ACK duplicado.
+				print("Random ID did not match. Resending last packet.")
+				sock.sendto(lastSent, (UDP_IP, UDP_PORT)) # Ya esta empacado, no ocupa casos.
+				timeCommStart, timeRIDStart = time.time(), time.time()
+				waitingReply = True 
 main()
 
 """Protocolo del cliente al servidor	
