@@ -51,16 +51,18 @@ def sendPackage(sensorType, data, socket):
 	return packed_data, randomID, True
 
 
->>>batarang_thrower.__doc__
-	"""
+
+"""
+	Routine of constant motion checking.	
 	batarang_thrower(path_length, frequency, lectures_queue)
-		Method wich manages an ultrasonic sensor. Provides lectures approximations
-		of human presence inside a area.
+	Method wich manages an ultrasonic sensor. Provides approximations
+	of human presence inside a area.
 	Parameters:
 		path_length: Size of the access path to the area of study
 		frequency: how often adds a lecture to the queue
 		lectures_queue: structure wich shares information with the other threads
-	"""
+
+"""
 	
 def batarang_thrower(path_length, frequency, lectures_queue)
 	trig = 23
