@@ -10,35 +10,29 @@ import queue
 from ultrasonic_sensor import bat_belt
 from sound_sensor import librarian_nark
 
-
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
-sock2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
 UDP_IP = "192.168.0.11"			  # Destino
 UDP_PORT = 5000				  # Destino
-UDP_IP_CLIENT = "10.1.138.34"  		  # IP Cliente - espera respuesta del server
+
+UDP_IP_CLIENT = "127.0.0.1"  		  # IP Cliente - espera respuesta del server
 UDP_PORT_SERVER_REPLY = 5005		  # Port en el que viene la respuesta del server
-sock2.bind((UDP_IP_CLIENT, UDP_PORT_SERVER_REPLY)) # Bind para respuesta del server
-packer1 = struct.Struct('1s f 4s 1s 7s') #  Hacer casos de los datos segun tipo 
-packer2 = struct.Struct('1s f 4s 1s f') #  Hacer casos de los datos segun tipo 
-#bueyPack = struct.Struct('1s 4s')
-timeCommLimit, timeRIDLimit = 1.0, 3.0
+sock.bind((UDP_IP_CLIENT, UDP_PORT_SERVER_REPLY)) # Bind para respuesta del server
+carretaInt = struct.Struct('1s I 4s 1s I') 
+bueyPack = struct.Struct('1s 4s')
+timeCommLimit, timeRIDLimit = 1.0, 3
 ridWanted = ''
 
-def sendPackage(sensorType, data, socket): 
+def sendPackage(sensorId, sensorCode, data, socket): # Verificar numero del tipo de dato
 	randomID = random.choice(string.ascii_letters)
-	values = (randomID.encode(), float(time.time()), bytearray([0,1,2,3]), sensorType.encode(), data.encode())
+	values = (randomID.encode(), int(time.time()), bytearray([6,0,0,sensorId]), chr(sensorCode).encode(), data)
 	print(values)
-	if sys.getsizeof(data)//8 == 7:
-		packed_data = packer1.pack(*values)
-		#print(sys.getsizeof(packed_data)//8) # Cantidad de bytes 
-	else: 
-		packed_data = packer2.pack(*values)
-		#print(sys.getsizeof(packed_data)//8) # Cantidad de bytes 
-	#print('{!r}', format(binascii.hexlify(packed_data))) #hexa #print(values) 
-	#print(packer2.unpack(packed_data))
-	socket.sendto(packed_data, (UDP_IP, UDP_PORT))
-	return packed_data, randomID, True
-		
+	packedData = carretaInt.pack(*values) 
+	unpackedData = carretaInt.unpack(packedData)
+	print(unpackedData)
+	socket.sendto(packedData, (UDP_IP, UDP_PORT))
+	return packedData, randomID, True		
+
+# Si no hay mensajes que neviar, enviar keepalive
 def main():
 	##########################Sensors init##############################
 	#Ultrasonic_sensor
@@ -58,27 +52,30 @@ def main():
 		
 	"""
 	####################################################################
+	
 	ridReceived = ''  
 	timeCommStart, timeRIDStart = time.time(), time.time()
-	lastSent, ridWanted, waitingReply = sendPackage(hex(0), "Carreta", sock) # tipo y data viene del sensor
+	lastSent, ridWanted, waitingReply = sendPackage(1, 9, random.randint(0,4294967295), sock) # tipo y data segun el get del sensor
 	while True:
 		if waitingReply == True: 
-			if time.time() - timeRIDStart <= timeRIDLimit: # Si aún estoy dentro del tiempo.
-				data, addr = sock2.recvfrom(20)  
-				unpackedData = packer1.unpack(data)
-				ridReceived = (unpackedData)[0].decode()
+			try: 
+				sock.settimeout(timeRIDLimit)
+				data, addr = sock.recvfrom(bueyPack.size)  
+				sock.settimeout(0)
+				unpackedData = bueyPack.unpack(data)
+				ridReceived = (unpackedData[0]).decode()
 				print("Recibi buey:", unpackedData)
 				waitingReply = False 
-			else:  # Si sucede un timeout.
+			except: # Si sucede un timeout.
 				print("Random ID was not received. Resending last packet.") 
-				print(time.time() - timeRIDStart)
+				#print(time.time() - timeRIDStart)
 				sock.sendto(lastSent, (UDP_IP, UDP_PORT)) # Ya esta empacado, no ocupa casos
 				timeCommStart, timeRIDStart = time.time(), time.time()
 		else:	
-			if ridReceived == ridWanted:    # Un paquete fue recibido, se verifica si es del deseado mediante el ACK. 
+			if ridReceived == ridWanted:    # Un paquete fue recibido, se verifica si es el deseado mediante el RID. 
 				print("Packet sent.")
-				print(time.time() - timeCommStart)
-				lastSent, ridWanted, waitingReply = sendPackage(hex(0) , "Carreta", sock) # Tipo y data viene del sensor
+				#print(time.time() - timeCommStart)
+				lastSent, ridWanted, waitingReply = sendPackage(1, 9, random.randint(0,4294967295), sock) # tipo y data segun el get del sensor
 				timeCommStart, timeRIDStart = time.time(), time.time()
 			else:  # Recibe un ACK duplicado.
 				print("Random ID did not match. Resending last packet.")
