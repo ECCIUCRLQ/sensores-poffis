@@ -5,9 +5,9 @@ import sys
 import time
 import random
 import string
-import RPi.GPIO as GPIO
 import threading
 import queue
+from ultrasonic_sensor import batarang_class
 
 #######################Ads conversor libraries##########################
 """
@@ -49,72 +49,21 @@ def sendPackage(sensorType, data, socket):
 	#print(packer2.unpack(packed_data))
 	socket.sendto(packed_data, (UDP_IP, UDP_PORT))
 	return packed_data, randomID, True
-
-
-
-"""
-	Routine of constant motion checking.	
-	batarang_thrower(path_length, frequency, lectures_queue)
-	Method wich manages an ultrasonic sensor. Provides approximations
-	of human presence inside a area.
-	Parameters:
-		path_length: Size of the access path to the area of study
-		frequency: how often adds a lecture to the queue
-		lectures_queue: structure wich shares information with the other threads
-
-"""
-	
-def batarang_thrower(path_length, frequency, lectures_queue)
-	trig = 23
-	echo = 24
-
-	GPIO.setmode(GPIO.BCM)
-	GPIO.setup(trig, GPIO.OUT)
-	GPIO.setup(echo, GPIO.IN)
-	GPIO.output(trig, GPIO.LOW)
-	time.sleep(2)
-	GPIO.output(trig, GPIO.HIGH)
-	time.sleep(0.00001)
-	GPIO.output(trig, GPIO.LOW)
-	people_counter=0
-	chrono_start=time.time()
-	while True:
-		while True:
-			if GPIO.input(echo) == GPIO.HIGH:
-				pulso_inicio = time.time()
-				break
-
-		while True:
-			if GPIO.input(echo) == GPIO.LOW:
-				pulso_fin = time.time()
-				break
-		duracion = pulso_fin - pulso_inicio
-		distancia = (34300 * duracion) / 2
-		if distancia < length
-			people_counter += 1
-			
-		if time.time()-chrono_start>=frequency:
-			lectures_queue.put(people_counter)
-			chrono_start=time.time()
 		
-
 def main():
 	##########################Sensors init##############################
 	#Batarang
 	path_length=50
 	frecuency=1
-	lectures_queue = queue.Queue(100) 
-	batarang = threading.Thread(target=batarang_thrower, args=(path_length, frecuency,lectures_queue))
-	batarang.start()
-	time.sleep(2) #Sensor config time
-	
+	batarang = batarang_class()
+	batarang.throw_batarang(path_length,frecuency)
 	#Sound sensor
 	i2c = busio.I2C(board.SCL, board.SDA)
 	ads = ADS.ADS1115(i2c)
 	
 	"""
 	Read sound sensor
-		value = AnalogIn(ads, ADS.P%)
+		value = batarang.catch_batarang()
 		%: stands for the number of the signal attached pin
 	Read from queue (ultrasonic_sensor)
 		value = lectures_queue.get()
