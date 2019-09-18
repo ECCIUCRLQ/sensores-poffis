@@ -7,20 +7,9 @@ import random
 import string
 import threading
 import queue
-from ultrasonic_sensor import batarang_class
+from ultrasonic_sensor import bat_belt
+from sound_sensor import librarian_nark
 
-#######################Ads conversor libraries##########################
-"""
-Important, libraries must be installed manually in the raspeberry. Follow=
-https://learn.adafruit.com/adafruit-4-channel-adc-breakouts/python-circuitpython
-or
-https://howchoo.com/g/mdzlytkyzgf/how-to-install-a-potentiometer-on-a-raspberry-pi
-"""
-import board
-import busio
-import adafruit_ads1x15.ads1115 as ADS
-from adafruit_ads1x15.analog_in import AnalogIn
-########################################################################
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
 sock2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
@@ -52,21 +41,21 @@ def sendPackage(sensorType, data, socket):
 		
 def main():
 	##########################Sensors init##############################
-	#Batarang
+	#Ultrasonic_sensor
 	path_length=50
 	frecuency=1
-	batarang = batarang_class()
+	batarang = bat_belt()
 	batarang.throw_batarang(path_length,frecuency)
 	#Sound sensor
-	i2c = busio.I2C(board.SCL, board.SDA)
-	ads = ADS.ADS1115(i2c)
+	rat = librarian_nark()
 	
 	"""
 	Read sound sensor
-		value = batarang.catch_batarang()
-		%: stands for the number of the signal attached pin
-	Read from queue (ultrasonic_sensor)
-		value = lectures_queue.get()
+		value = rat.tell_on_someone(gain)
+		%: Sensibility of the sensor
+	Read ulrasonic sensor
+		value = batarang.catch_batarang()	
+		
 	"""
 	####################################################################
 	ridReceived = ''  

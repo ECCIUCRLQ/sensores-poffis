@@ -9,18 +9,17 @@ import threading
 import queue
 import RPi.GPIO as GPIO
 
-lectures_queue = queue.Queue(100) 
+lectures_queue = queue.Queue(1000) 
 
-class batarang_class:
+class bat_belt:
 	"""
-	Routine of constant motion checking.	
-	batarang_thrower(path_length, frequency, lectures_queue)
-	Method wich manages an ultrasonic sensor. Provides approximations
-	of human presence inside a area.
+	Routine of constant motion checking.Method wich manages an ultrasonic 
+	sensor. Provides approximationsof human presence inside a area.
 	Parameters:
+		self:implicit object provided  by python (Kind of "this") when 
+		make a call from other file.
 		path_length: Size of the access path to the area of study
 		frequency: how often adds a lecture to the queue
-		lectures_queue: structure wich shares information with the other threads
 
 	"""
 	
@@ -57,10 +56,25 @@ class batarang_class:
 			if time.time()-chrono_start>=frequency:
 				lectures_queue.put(people_counter)
 				chrono_start=time.time()
-				
+	"""
+	Return the values of the queue to the client
+	Parameter 
+		self:implicit object provided  by python (Kind of "this") when 
+		make a call from other file.
+		
+	"""			
 	def catch_batarang(self):
 		return lectures_queue.get()
-		
+	
+	"""
+	Initializer of the thread that execute lectures constantly
+	Parameters:
+			self:implicit object provided  by python (Kind of "this") when 
+			make a call from other file.
+			path_length: Size of the access path to the area of study
+			frequency: how often adds a lecture to the queue
+	
+	"""
 	def throw_batarang(self, path_length, frequency):
 		batarang = threading.Thread(target=self.batarang_thrower, args=(path_length, frequency))
 		batarang.start()
