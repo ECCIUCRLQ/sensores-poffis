@@ -3,11 +3,15 @@
 # License: Public Domain
 
 # Import the ADS1x15 module.
-import Adafruit_ADS1x15
+#import Adafruit_ADS1x15 # DESCOMENTAR
 
 # Create an ADS1115 ADC (16-bit) instance.
-adc = Adafruit_ADS1x15.ADS1115()
-class librarian_nark:
+#adc = Adafruit_ADS1x15.ADS1115() # DESCOMENTAR
+
+# Sensibilidad del sensor de sonido.
+GAIN = 1
+
+class SoundSensor:
     
     """
     Method that returns on demand the actual read of noise.
@@ -24,8 +28,9 @@ class librarian_nark:
       -   8 = +/-0.512V
       -  16 = +/-0.256V
     """
-    def tell_on_someone(self, user_gain):
-        return adc.read_adc(0, gain=user_gain)
+    def getSoundData(self):
+        #return adc.read_adc(0,GAIN) # Descomentar
+        return 666
     
 
 

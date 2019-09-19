@@ -7,11 +7,17 @@ import random
 import string
 import threading
 import queue
-import RPi.GPIO as GPIO
+#import RPi.GPIO as GPIO # DESCOMENTAR
 
-lectures_queue = queue.Queue(1000) 
+# Sensor constants.
+PATH_LENGTH = 50
+FREQUENCY = 1
 
-class bat_belt:
+# Sensor data queue.
+QUEUE_SIZE = 10000
+lectures_queue = queue.Queue(QUEUE_SIZE) 
+
+class MovementSensor:
 	"""
 	Routine of constant motion checking.Method wich manages an ultrasonic 
 	sensor. Provides approximationsof human presence inside a area.
@@ -23,16 +29,16 @@ class bat_belt:
 
 	"""
 	
-	def batarang_thrower(self,path_length, frequency):
-		trig = 23
+	def batarang_thrower(self):
+		"""trig = 23
 		echo = 24
 
 		GPIO.setmode(GPIO.BCM)
 		GPIO.setup(trig, GPIO.OUT)
 		GPIO.setup(echo, GPIO.IN)
 
-		people_counter=0
-		chrono_start=time.time()
+		people_counter = 0
+		chrono_start = time.time()
 		while True:
 			GPIO.output(trig, GPIO.LOW)
 			time.sleep(0.5)
@@ -50,12 +56,12 @@ class bat_belt:
 					break
 			duracion = pulso_fin - pulso_inicio
 			distancia = (34300 * duracion) / 2
-			if distancia < path_length:
+			if distancia < PATH_LENGTH:
 				people_counter += 1
 				
-			if time.time()-chrono_start>=frequency:
+			if time.time()-chrono_start >= FREQUENCY:
 				lectures_queue.put(people_counter)
-				chrono_start=time.time()
+				chrono_start = time.time()"""
 	"""
 	Return the values of the queue to the client
 	Parameter 
@@ -63,8 +69,9 @@ class bat_belt:
 		make a call from other file.
 		
 	"""			
-	def catch_batarang(self):
-		return lectures_queue.get()
+	def getMovementData(self):
+		#return lectures_queue.get(True) # Descomentar
+		return 777
 	
 	"""
 	Initializer of the thread that execute lectures constantly
@@ -75,8 +82,8 @@ class bat_belt:
 			frequency: how often adds a lecture to the queue
 	
 	"""
-	def throw_batarang(self, path_length, frequency):
-		batarang = threading.Thread(target=self.batarang_thrower, args=(path_length, frequency))
+	def throw_batarang(self):
+		batarang = threading.Thread(target=self.batarang_thrower)
 		batarang.start()
 		
 			
