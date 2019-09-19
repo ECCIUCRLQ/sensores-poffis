@@ -53,6 +53,8 @@ def recv_package():
 				sensor_identification = first_byte_sensorID + (second_byte_sensorID + 256)
 			elif(third_byte_sensorID > 0):
 				sensor_identification = first_byte_sensorID + (third_byte_sensorID + (256 * 256))
+			else:
+				sensor_identification = first_byte_sensorID
 			#print(team)
 			#print(sensor_identification)
 			#print(ACK)
