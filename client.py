@@ -15,7 +15,7 @@ from datetime import datetime
 # Creacion del socket, definicion de IP y puerto del servidor.
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
 UDP_IP = "127.0.0.1"			 
-UDP_PORT = 5002				 
+UDP_PORT = 5003 			 
 
 # SensorID = TEAM_ID + MOVEMENT_SENSOR || TEAM_ID + SOUND_SENSOR
 TEAM_ID = 6
@@ -38,7 +38,7 @@ carretaPackage = struct.Struct('1s I 4s 1s I')
 bueyPackage = struct.Struct('1s 4s')
 
 # Frecuencia de envío de paquetes y timeout (en segundos).
-sendFrequency, timeOut = 1.0, 5.0
+sendFrequency, timeOut = 0.5, 5.0
 
 # Mutex.
 lock = threading.Lock()
@@ -72,7 +72,8 @@ def createPackage(sensorType, lastRID, sensorInstance = None):
 	lastRID = randomID
 	return carretaPackage.pack(*values), lastRID
 		
-def sendPackage(lastRID):	
+def sendPackage():	
+	global lastRID
 	if not packetsQueue.empty() : # Si hay un paquete disponible en la cola lo envía.
 		lock.acquire()
 		packet = packetsQueue.get()
@@ -90,7 +91,7 @@ def main():
 	threading.Thread(target=pushPacketToQueue, args = (movementSensor, soundSensor) ).start()
 	global lastRID
 	timeCommStart = time.time()
-	lastSent, waitingReply, lastRID =  sendPackage(lastRID)
+	lastSent, waitingReply, lastRID =  sendPackage()
 	randomIdWanted = carretaPackage.unpack(lastSent)[0].decode()
 	while True:		
 		if waitingReply == True: 
@@ -100,23 +101,19 @@ def main():
 				unpackedData = bueyPackage.unpack(data)
 				randomIdReceived = (unpackedData[0]).decode()
 				print("Client: State: Buey packet received : ", unpackedData)
-				waitingReply = False
-				print(lastRID) 
+				waitingReply = False 
 			except: 
 				print("Client: State: Buey packet lost (time-out), resending...") 
-				print(lastRID)
 				sock.sendto(lastSent, (UDP_IP, UDP_PORT))
 		elif time.time() - timeCommStart >= sendFrequency:	
 			if randomIdReceived == randomIdWanted:    
-				lastSent, waitingReply, lastRID =  sendPackage(lastRID)
+				lastSent, waitingReply, lastRID =  sendPackage()
 				timeCommStart = time.time()
 				randomIdWanted = carretaPackage.unpack(lastSent)[0].decode()
 				print("Client : State: Packet sent successfully.")
-				print(lastRID) 
 			else: 
 				print("Client : State: Random ID did not match, resending...")
 				sock.sendto(lastSent, (UDP_IP, UDP_PORT)) 
 				timeCommStart = time.time()
 				waitingReply = True 
-				print(lastRID) 
 main()

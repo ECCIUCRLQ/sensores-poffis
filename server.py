@@ -7,8 +7,8 @@ import threading
 import csv
 from datetime import datetime
 
-UDP_IP = "127.0.0.1"
-UDP_PORT = 5009
+UDP_IP = "10.1.138.34"
+UDP_PORT = 5003
 #struct datos recibidos-datos enviados
 carretaInt = struct.Struct('1s I 4s 1s I') 
 bueyPack = struct.Struct('1s 4s')
@@ -27,7 +27,7 @@ def recv_package():
 	while True:
 		try:
 			#si el cliente no responde en 15 segundo, murio el cliente
-			sock.settimeout(15)
+			sock.settimeout(180)
 			data, addr = sock.recvfrom(carretaInt.size)
 			#print ('received message: {!r}',  format(binascii.hexlify(data)))
 			unpackedData = carretaInt.unpack(data)
@@ -76,6 +76,8 @@ def recv_package():
 					#señala con un semáforo que hay un nuevo paquete por ser leído
 					semaphore.release()
 				lock.release
+			else:
+				print(ACK)
 		except: #timeout: se perdio el cliente
 			package = [0,0,0,0,0,0,1]
 def main():
@@ -107,7 +109,7 @@ def main():
 						teamID = line[4]
 					if(int(line[1]) == sensor_type):
 						sensor_typeID = line[2]		
-				print (datetime.utcfromtimestamp(date).strftime('%Y-%m-%d %H:%M:%S'), sensor_typeID,teamID,sensor_identification,data)
+				print (datetime.utcfromtimestamp(date-21600).strftime('%Y-%m-%d %H:%M:%S'), sensor_typeID,teamID,sensor_identification,data)
 			else:
 				print("cliente caido")
 				break

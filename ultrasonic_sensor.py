@@ -7,7 +7,7 @@ import random
 import string
 import threading
 import queue
-#import RPi.GPIO as GPIO # DESCOMENTAR
+import RPi.GPIO as GPIO # DESCOMENTAR
 
 # Sensor constants.
 PATH_LENGTH = 50
@@ -30,7 +30,7 @@ class MovementSensor:
 	"""
 	
 	def batarang_thrower(self):
-		"""trig = 23
+		trig = 23
 		echo = 24
 
 		GPIO.setmode(GPIO.BCM)
@@ -61,7 +61,7 @@ class MovementSensor:
 				
 			if time.time()-chrono_start >= FREQUENCY:
 				lectures_queue.put(people_counter)
-				chrono_start = time.time()"""
+				chrono_start = time.time()
 	"""
 	Return the values of the queue to the client
 	Parameter 
@@ -70,8 +70,7 @@ class MovementSensor:
 		
 	"""			
 	def getMovementData(self):
-		#return lectures_queue.get(True) # Descomentar
-		return 777
+		return lectures_queue.get(True)
 	
 	"""
 	Initializer of the thread that execute lectures constantly
