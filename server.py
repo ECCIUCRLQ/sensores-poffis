@@ -83,6 +83,11 @@ def recv_package():
 def main():
 	thread = threading.Thread(target=recv_package)
 	thread.start()
+	### Leer cuantos sensores hay conectados para poder realizar el handshake(malloc mágico)
+	### Crear barrera con contador = cuantos sensores hay
+	### Crear cola para cada thread
+	### Crear semaforo para cada cola de rocolectores 
+	### Crear threads recolectores (se envía de parámetro su cola y su identificador respectivo)
 	while True:
 		#abre el archivo csv en modo lectura
 		with open('identificadores.csv', 'r') as csv_file:
@@ -108,13 +113,37 @@ def main():
 					if(int(line[0]) == team):
 						teamID = line[4]
 					if(int(line[1]) == sensor_type):
-						sensor_typeID = line[2]		
+						sensor_typeID = line[2]
+				### Según teamID y sensorID se agregan los datos a una cola respectiva	
+				### Se agrega 1 a el semáforo que corresponde a este identificador de teamID y sensorID	
 				print (datetime.utcfromtimestamp(date-21600).strftime('%Y-%m-%d %H:%M:%S'), sensor_typeID,teamID,sensor_identification,data)
 			else:
 				print("cliente caido")
 				break
 
-main() 
+main()
+
+
+### def recolector(queue colaThread, int identificadorThread):
+	### Realiza handshake mágico con la interfaz, enviando el identificador del thread que lo realiza
+	### Intenta pasar la barrera de recolectores, simbolizando que ya todos los recolectores hicieron el malloc magico con 	la interfaz
+	### En un ciclo indefinido
+		### Intentar abrir semáforo que le dice si hay un nuevo paquete por enviar a la interfaz (Espera hasta que lo haya)
+		### Una vez tiene un paquete, se lo envía a la interfaz, enviando el identificador del Thread, date y data
+
+#def interfaz():
+	### while(handshake_magicos_recibidos < cantidad_de_recolectores)
+	### Recibir todos los handshake magicos
+	### Barrera 
+	### Ciclo infinito:
+		### if (ingresar_datos == True):
+
+
+		
+		
+
+
+
 	
 
 """Protocolo del cliente al servidor	
