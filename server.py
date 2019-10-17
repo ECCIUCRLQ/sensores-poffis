@@ -81,15 +81,17 @@ def recv_package():
 		except: #timeout: se perdio el cliente
 			package = [0,0,0,0,0,0,1]
 def main():
+	
 	thread = threading.Thread(target=recv_package)
 	thread.start()
 	### Leer cuantos sensores hay conectados para poder realizar el handshake(malloc mágico)
 	### Crear barrera con contador = cuantos sensores hay
 	### Crear cola para cada thread
-	### Crear semaforo para cada cola de rocolectores 
+	### Crear semaforo para cada cola de rocolectores
 	### Crear threads recolectores (se envía de parámetro su cola y su identificador respectivo)
 	while True:
 		#abre el archivo csv en modo lectura
+		
 		with open('identificadores.csv', 'r') as csv_file:
 			csv_reader = csv.reader(csv_file,delimiter = ',')
 			next(csv_reader)
@@ -123,7 +125,10 @@ def main():
 
 main()
 
-
+def initializer():
+	colector_type
+	with open('identificadores.csv', 'r') as csv_file:
+	csv_reader = csv.reader(csv_file,delimiter = ',')
 ### def recolector(queue colaThread, int identificadorThread):
 	### Realiza handshake mágico con la interfaz, enviando el identificador del thread que lo realiza
 	### Intenta pasar la barrera de recolectores, simbolizando que ya todos los recolectores hicieron el malloc magico con 	la interfaz
