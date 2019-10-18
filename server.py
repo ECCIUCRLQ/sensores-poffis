@@ -6,6 +6,8 @@ import queue
 import threading
 import csv
 from datetime import datetime
+from interface import Interface
+from collectors import Collectors
 
 UDP_IP = "10.1.138.34"
 UDP_PORT = 5003
@@ -91,6 +93,12 @@ def main():
 	### Crear threads recolectores (se envía de parámetro su cola y su identificador respectivo)
 	while True:
 		#abre el archivo csv en modo lectura
+		interface_queue=queue.Queue(queue_size)
+		collectors = Colectors()
+		collectors_info = collectors.initializer(interface_queue)
+		interface = Interface()
+		interface.initializer(interface_queue, collectors_info)
+		
 		
 		with open('identificadores.csv', 'r') as csv_file:
 			csv_reader = csv.reader(csv_file,delimiter = ',')
@@ -125,10 +133,9 @@ def main():
 
 main()
 
-def initializer():
-	colector_type
-	with open('identificadores.csv', 'r') as csv_file:
-	csv_reader = csv.reader(csv_file,delimiter = ',')
+	
+		
+
 ### def recolector(queue colaThread, int identificadorThread):
 	### Realiza handshake mágico con la interfaz, enviando el identificador del thread que lo realiza
 	### Intenta pasar la barrera de recolectores, simbolizando que ya todos los recolectores hicieron el malloc magico con 	la interfaz
