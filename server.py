@@ -115,7 +115,7 @@ def main():
 			if(timeout == 0):
 				#Multiplexor: Envia el paquete a su cola correspondiente
 				for line in collectors_info:
-					if(line[0] == package[2] && line[1] ==package[3]):
+					if(line[0] == package[2] and line[1] ==package[3]):
 						line[3].aquire()
 						line[2].put(package)
 						line[3].notify()
