@@ -5,12 +5,17 @@ import threading
 import csv
 
 pages_in_system = 1000
+pages_owned = []
 
 class Interface:
+	#La cola se recibe como parametro ya que fue creada por el servidor para 
+	#compartirla con los recolectores.
+	#Cada linea de la matriz(tabla) de la interfaz es asi:
+	#[Thread_id, offset, pages_owned]
 	def initializer(interface_queue, collectors_info):
 		id_table=[]
 		for entry in collector_info:
-			id_table.append(entry[0], entry[1], 0,  queue.Queue(pages_in_system))
+			id_table.append(entry[4] ,0,  pages_owned)
 		thread=threading.Thread(target=self.run, args =(interface_queue, id_table) )
 		thread.start
 

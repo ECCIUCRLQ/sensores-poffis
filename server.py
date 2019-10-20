@@ -96,6 +96,8 @@ def main():
 		interface_queue=queue.Queue(queue_size)
 		collectors = Colectors()
 		collectors_info = collectors.initializer(interface_queue)
+		
+		#Por cuestiones de comodidad se inicializa acá pero no se usa posteriormente.
 		interface = Interface()
 		interface.initializer(interface_queue, collectors_info)
 		
@@ -108,47 +110,22 @@ def main():
 			lock.acquire
 			package = packet_queue.get()
 			lock.release
-			#Si hubo un timeout, el servidor termina su ejecución, sino imprime el paquete
+			#Si hubo un timeout, el servidor termina su ejecución; si no, imprime el paquete.
 			timeout = package[5]
 			if(timeout == 0):
-				date = package[0]
-				sensor_type = package[1]
-				team = package[2]
-				sensor_identification = package[3]
-				data = package[4]
-				teamID = ""
-				sensor_typeID = ""
-				#obtiene sus equivalentes según el archivo CSV
-				for line in csv_reader:
-					if(int(line[0]) == team):
-						teamID = line[4]
-					if(int(line[1]) == sensor_type):
-						sensor_typeID = line[2]
-				### Según teamID y sensorID se agregan los datos a una cola respectiva	
-				### Se agrega 1 a el semáforo que corresponde a este identificador de teamID y sensorID	
-				print (datetime.utcfromtimestamp(date-21600).strftime('%Y-%m-%d %H:%M:%S'), sensor_typeID,teamID,sensor_identification,data)
+				#Multiplexor: Envia el paquete a su cola correspondiente
+				for line in collectors_info:
+					if(line[0] == package[2] && line[1] ==package[3]):
+						line[3].aquire()
+						line[2].put(package)
+						line[3].notify()
+						line[3].release()
 			else:
 				print("cliente caido")
 				break
 
 main()
 
-	
-		
-
-### def recolector(queue colaThread, int identificadorThread):
-	### Realiza handshake mágico con la interfaz, enviando el identificador del thread que lo realiza
-	### Intenta pasar la barrera de recolectores, simbolizando que ya todos los recolectores hicieron el malloc magico con 	la interfaz
-	### En un ciclo indefinido
-		### Intentar abrir semáforo que le dice si hay un nuevo paquete por enviar a la interfaz (Espera hasta que lo haya)
-		### Una vez tiene un paquete, se lo envía a la interfaz, enviando el identificador del Thread, date y data
-
-#def interfaz():
-	### while(handshake_magicos_recibidos < cantidad_de_recolectores)
-	### Recibir todos los handshake magicos
-	### Barrera 
-	### Ciclo infinito:
-		### if (ingresar_datos == True):
 
 
 		
