@@ -9,7 +9,7 @@ from datetime import datetime
 from interface import Interface
 from collectors import Collectors
 
-UDP_IP = "10.1.138.34"
+UDP_IP = "127.0.0.1"#"10.1.138.34"
 UDP_PORT = 5003
 #struct datos recibidos-datos enviados
 carretaInt = struct.Struct('1s I 4s 1s I') 
@@ -69,7 +69,7 @@ def recv_package():
 				sock.sendto(packedData, addr)
 				#actualiza el ACK para ver si es un paquete repetido
 				lastACK = ACK
-				package= [date,sensor_type,team,sensor_identification,data,0]
+				package = [date,sensor_type,team,sensor_identification,data,0]
 				#entra a un mutex para añadir a la cola
 				lock.acquire
 				#si no es un keep alive, añade el paquete a la cola de paquetes
@@ -91,17 +91,17 @@ def main():
 	### Crear cola para cada thread
 	### Crear semaforo para cada cola de rocolectores
 	### Crear threads recolectores (se envía de parámetro su cola y su identificador respectivo)
-	while True:
-		#abre el archivo csv en modo lectura
-		interface_queue=queue.Queue(queue_size)
-		collectors = Colectors()
-		collectors_info = collectors.initializer(interface_queue)
-		
-		#Por cuestiones de comodidad se inicializa acá pero no se usa posteriormente.
-		interface = Interface()
-		interface.initializer(interface_queue, collectors_info)
-		
-		
+	#abre el archivo csv en modo lectura
+	interface_queue = queue.Queue(queue_size)
+	collectors = Collectors()
+	collectors_info = collectors.initializer(interface_queue)
+	#print("a")
+	
+	#Por cuestiones de comodidad se inicializa acá pero no se usa posteriormente.
+	interface = Interface()
+	interface.initializer(interface_queue, collectors_info)
+	#print("b")
+	while True:		
 		with open('identificadores.csv', 'r') as csv_file:
 			csv_reader = csv.reader(csv_file,delimiter = ',')
 			next(csv_reader)
@@ -112,14 +112,23 @@ def main():
 			lock.release
 			#Si hubo un timeout, el servidor termina su ejecución; si no, imprime el paquete.
 			timeout = package[5]
+			#print("e")
 			if(timeout == 0):
+				#print(":D")
 				#Multiplexor: Envia el paquete a su cola correspondiente
 				for line in collectors_info:
-					if(line[0] == package[2] and line[1] ==package[3]):
-						line[3].aquire()
+					#print("Sera?")
+					"""if line[0] == 6:
+						print(package)
+						print(line[0], package[1])
+						print(line[1], package[2])"""
+					if(line[0] == package[2] and line[1] == package[1]):
+						#print("c")
+						line[3].acquire()
 						line[2].put(package)
 						line[3].notify()
 						line[3].release()
+						#print("d")
 			else:
 				print("cliente caido")
 				break
