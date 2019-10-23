@@ -25,19 +25,24 @@ class Interface:
 		thread.start()
 	
 	def run(self, interface_queue, id_table):
-		thread = threading.Thread(target=self.plotRequested)
+		thread = threading.Thread(target=self.plotRequested, args=(id_table, ))
 		thread.start()
 		thread = threading.Thread(target=self.dataEntry, args=(interface_queue,id_table) )
 		thread.start()
 		sensorRequestedData = -1   # Hubo / Cual sensor solicito datos
 
-	def plotRequested(self):
+	def plotRequested(self, id_table):
 		sensorRequestedPlot = -1
+		data = []
 		while True:
 			sensorRequestedPlot = int(input()) # Funcion de Graficador solitando hacer plot
 			if sensorRequestedPlot > -1:
 				lock.acquire()
-				# Pedir paginas uno a uno	
+				data = []
+				#id_table[sensorRequestedPlot][2] = [1,4,5]
+				for x in id_table[sensorRequestedPlot][2]:	
+					#data.extend( solicitudPagina(x) )
+					# Pedir paginas uno a uno	
 				lock.release()	
 
 	def dataEntry(self, interface_queue, id_table):
