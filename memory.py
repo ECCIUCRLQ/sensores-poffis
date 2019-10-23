@@ -1,32 +1,115 @@
 import csv
-def createNewPage(pageNumber): #Crea nueva página en memoria principal
-	f = open(str(pageNumber)+".csv", "x")
+import numpy as matrix
+import os
+
+MAX_PAGE_COUNT = 10000
+MAIN_MEMORY_PAGE_COUNT = 1000
+INFO_PER_PAGE = 2
+MAIN_MEMORY = 0
+SECONDARY_MEMORY = 1
+
+
+class MemoryManager:
 	
-def writePage(pageNumber,date,data): #Escribir en memoria principal
-	# Abre el archivo,
-	f = open(str(pageNumber)+".csv", "a")
-	vctr=[date,data]
-	csvWriter = csv.writer(f)
-	csvWriter.writerow(vctr)
+	def __init__(self):
+		self.frameTable = matrix.zeros( shape = (MAX_PAGE_COUNT, INFO_PER_PAGE), dtype = int )   		
+		self.mainMemory = []
+		self.secondaryMemory = [] 
+		self.lastPageCreated = -1
+		self.olderPageIndex = 0 
 	
-def sendInfoInDisk(sensorID): #lee y manda a interfaz lo de ese sensor en memoria secundaria
-	f = open(str(sensorID)+".csv", "r")
-	csvReader = csv.reader(f,delimiter = ',')
-	dataBuffer=[]
-	for row in csvReader:
-		dataBuffer.append(row)
-	return dataBuffer
+	def updateFrameTable(self, pageNumber, physicalAddress, secondaryMemory):
+		self.frameTable[pageNumber][0] = physicalAddress
+		self.frameTable[pageNumber][1] = secondaryMemory
 	
-def sendPageToInterface(pageNumber,dataBuffer): # Enviar página de memoria principal a interfaz
-	f = open(str(pageNumber)+".csv", "r")
-	csvReader = csv.reader(f,delimiter = ',')
-	for row in csvReader:
-		dataBuffer.append(row)
-	return dataBuffer
+	def createNewPage(self): 
+		if self.lastPageCreated < MAX_PAGE_COUNT: 
+			self.lastPageCreated += 1 
+			newPage = open( str(self.lastPageCreated) + ".csv", "a" )
+			
+			if self.olderPageIndex < MAIN_MEMORY_PAGE_COUNT:
+				self.mainMemory.append(newPage)
+				
+			else:
+				pageToReplace = self.olderPageIndex % MAIN_MEMORY_PAGE_COUNT
+				self.sentToSecondaryMemory(pageToReplace)
+				self.mainMemory[pageToReplace] = newPage
+
+			self.updateFrameTable(self.lastPageCreated, self.olderPageIndex % MAIN_MEMORY_PAGE_COUNT  , MAIN_MEMORY)
+			
+				
+			self.olderPageIndex += 1
+			return self.lastPageCreated
+		else: 
+			return -1
+			
+	def sentToSecondaryMemory(self, pageToReplace):
+		self.secondaryMemory.append( self.mainMemory[pageToReplace] )
+		self.updateFrameTable(pageToReplace, len(self.secondaryMemory) - 1, SECONDARY_MEMORY)
+		
+	def writePage(self, pageNumber, date, data, offset): 
+		packageInfo = [date,data]
+
+		if self.frameTable[pageNumber][1] == 0: # Si la página está en memoria principal.
+			pageToWrite = self.mainMemory[ self.frameTable[pageNumber][0] ]
+			csvWriter = csv.writer(pageToWrite)	
+		else: # Si la página está en memoria secundaria.
+			mainMemIndex = self.olderPageIndex % MAIN_MEMORY_PAGE_COUNT
+			pageName = self.mainMemory[mainMemIndex].name
+			mainMemoryPageNumber = int( os.path.basename(pageName).rsplit('.',1)[0] ) 
+			self.doSwap( mainMemoryPageNumber, pageNumber, mainMemIndex, self.frameTable[pageNumber][0] )
+			pageName = self.mainMemory[mainMemIndex].name
+			mainMemoryPageNumber = int( os.path.basename(pageName).rsplit('.',1)[0] ) 
+			pageToWrite = self.mainMemory[ self.frameTable[mainMemoryPageNumber][0] ]
+			csvWriter = csv.writer(pageToWrite)
+		
+		csvWriter.writerow(packageInfo)
+		self.olderPageIndex += 1
+			
+	def doSwap(self, pageMainMem, pageSecondMem, mainMemIndex, secondMemIndex):
+		temp = self.mainMemory[mainMemIndex]
+		self.mainMemory[mainMemIndex] = self.secondaryMemory[secondMemIndex]
+		self.secondaryMemory[secondMemIndex] = temp
+		self.updateFrameTable(pageMainMem, secondMemIndex, SECONDARY_MEMORY)
+		self.updateFrameTable(pageSecondMem, mainMemIndex, MAIN_MEMORY)
 	
-#def write_in_disk(sensorID,page_number): # envia a memoria secundaria
-	
-#for x in range(6):
-#	write_page(x,1,1)
-	
-	
+		
+	def sendPageToInterface(self, pageNumber): # Enviar página de memoria principal a interfaz
+		dataBuffer = []
+		if self.frameTable[pageNumber][1] == 0:
+			pageName = self.mainMemory[ self.frameTable[pageNumber][0] ].name 
+			page = int( os.path.basename(pageName).rsplit('.',1)[0] )
+			self.mainMemory[ self.frameTable[pageNumber][0] ].seek(0)
+		else:
+			pageName = self.secondaryMemory[ self.frameTable[pageNumber][0] ].name
+			page = int( os.path.basename(pageName).rsplit('.',1)[0] )
+			self.secondaryMemory[ self.frameTable[pageNumber][0] ].seek(0)
+		
+		# Posiciones pares contienen la fecha e impares el dato.
+		csv_file =  open( str(page) + ".csv", 'r' ) 
+		csvReader = csv.reader(csv_file)
+		for currentLine in csvReader:
+			dataBuffer.append(currentLine[0])
+			dataBuffer.append(currentLine[1])
+		return dataBuffer
+
+#kappa = MemoryManager()
+#kappa.createNewPage()
+#print(kappa.frameTable)
+#print()
+#kappa.createNewPage()
+#print(kappa.frameTable)
+#print()
+#kappa.createNewPage()
+#print(kappa.frameTable)
+#print()
+#kappa.createNewPage()
+#print(kappa.frameTable)
+#print()
+#kappa.createNewPage()
+#print(kappa.frameTable)
+#print()
+#kappa.writePage(0,1,1,0)
+#kappa.writePage(0,1,0,0)
+#print( kappa.sendPageToInterface(0) )
+#kappa.writePage(0,2,10,0)
