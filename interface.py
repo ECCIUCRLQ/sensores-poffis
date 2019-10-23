@@ -33,17 +33,17 @@ class Interface:
 
 	def plotRequested(self, id_table):
 		sensorRequestedPlot = -1
-		data = []
 		while True:
-			sensorRequestedPlot = int(input()) # Funcion de Graficador solitando hacer plot
+			# Input era para probar
+			sensorRequestedPlot = int(input()) # Funcion de Graficador solitando hacer plot,
 			if sensorRequestedPlot > -1:
-				lock.acquire()
-				data = []
+				data = []  # Es el que usa graficador
 				#id_table[sensorRequestedPlot][2] = [1,4,5]
 				for x in id_table[sensorRequestedPlot][2]:	
+					lock.acquire()
 					#data.extend( solicitudPagina(x) )
+					lock.release()	
 					# Pedir paginas uno a uno	
-				lock.release()	
 
 	def dataEntry(self, interface_queue, id_table):
 			while True:
@@ -54,18 +54,18 @@ class Interface:
 					currentPage = sensorPages[len(sensorPages)-1]
 					numberReceived = -1
 					if pageSize > spaceUsed: # Hay espacio
-						lock.acquire()
 						# currentPage,spaceUsed
 						# Enviar direccion logica (Pagina actual) y offset (spaceUsed).
-						# numberReceived = funcion que retorna numero de pagina
-						id_table[data_card[1]][1] += sys.getsizeof(data_card[0])
-						lock.release()
-					else: 					# No hay espacio
 						lock.acquire()
+						# numberReceived = funcion que retorna numero de pagina
+						lock.release()
+						id_table[data_card[1]][1] += sys.getsizeof(data_card[0])
+					else: 					# No hay espacio
 						# Pide nueva pagina
+						lock.acquire()
 						# numberReceived = funcion que retorna numero de pagina 
+						lock.release()
 						sensorPages.append(numberReceived)
 						id_table[data_card[1]][1] = sys.getsizeof(data_card[0])
-						lock.release()
 
 	
