@@ -25,7 +25,7 @@ class Collectors:
 			csv_reader = csv.reader(csv_file,delimiter = ',')
 			#Saltamos encabezados del csv
 			next(csv_reader)
-			
+			next(csv_reader)
 			#El siguiente for crea la matriz(tabla) donde se va a guardar la informacion
 			#de los recolectores
 			#Cada fila de la matriz es un recolector y lucirian asi:
@@ -39,19 +39,19 @@ class Collectors:
 			
 			collectors_info=[]
 			for line in csv_reader:
-				if(line[0]==-1):
-					break
 				#El thread_id se asigna en el siguiente for, por eso es 0.
 				row = [int(line[0]),int(line[1]),queue.Queue(queue_size),threading.Condition(),0]
 				collectors_info.append(row)
 				csv_sensor_counter+=1
+				print(csv_sensor_counter)
+			
+			
 			
 			#Crea un thread por cada entrada de la matriz anterior
-			for n_collector_thread in range(csv_sensor_counter):
+			for n_collector_thread in range(csv_sensor_counter-1):
 				collectors_info[n_collector_thread][4] = n_collector_thread
-				thread=threading.Thread(target=self.collect, args =(n_collector_thread, collectors_info[n_collector_thread][2],interface_queue,collectors_info[n_collector_thread][3]) )
-				thread.start
-				
+				thread = threading.Thread(target=self.collect, args =(n_collector_thread, collectors_info[n_collector_thread][2],interface_queue,collectors_info[n_collector_thread][3]) )
+				thread.start()
 			
 			#Se le devuelve al servidor para que pueda multiplexar los paquetes	
 			return collectors_info;
@@ -61,9 +61,9 @@ class Collectors:
 		while True:
 			#Esta seccion es la de recoleccion y canalizacion a la cola de la interfaz
 			#Si la cola esta vacia el thread no consume procesamiento
-			print("abecede")
 			condition.acquire()
 			if(collector_queue.empty()):
+				print("abecede")
 				condition.wait()
 			#Se le pasa el thread_id a interfaz para que sea mas sencillo identificar los paquetes
 			packet = [collector_queue.get(),thread_id]
