@@ -6,9 +6,16 @@ import csv
 
 queue_size=1000
 
+def threaded(collect):
+	def wrapper(thread_id, collector_queue ,interface_queue, condition):
+		thread = threading.Thread(target=collect, args=(thread_id, collector_queue ,interface_queue, condition))
+		thread.start()
+		return thread
+	return wrapper
+
 class Collectors:
 	#Recibe la cola a donde debe enviar sus paquetes
-	def initializer(interface_queue):
+	def initializer(self, interface_queue):
 		
 		#Se usa para saber cuantos thread crear 
 		csv_sensor_counter=0
@@ -35,7 +42,8 @@ class Collectors:
 				if(line[0]==-1):
 					break
 				#El thread_id se asigna en el siguiente for, por eso es 0.
-				collectors_info.append(int(line[0]),int(line[1]),queue.Queue(queue_size),threading.Condition(),0)
+				row = [int(line[0]),int(line[1]),queue.Queue(queue_size),threading.Condition(),0]
+				collectors_info.append(row)
 				csv_sensor_counter+=1
 			
 			#Crea un thread por cada entrada de la matriz anterior
@@ -43,16 +51,18 @@ class Collectors:
 				collectors_info[n_collector_thread][4] = n_collector_thread
 				thread=threading.Thread(target=self.collect, args =(n_collector_thread, collectors_info[n_collector_thread][2],interface_queue,collectors_info[n_collector_thread][3]) )
 				thread.start
+				
 			
 			#Se le devuelve al servidor para que pueda multiplexar los paquetes	
 			return collectors_info;
 		
 		
-	def collect(thread_id, collector_queue ,interface_queue, condition):
+	def collect(self, thread_id, collector_queue ,interface_queue, condition):
 		while True:
 			#Esta seccion es la de recoleccion y canalizacion a la cola de la interfaz
 			#Si la cola esta vacia el thread no consume procesamiento
-			condition.aquire()
+			print("abecede")
+			condition.acquire()
 			if(collector_queue.empty()):
 				condition.wait()
 			#Se le pasa el thread_id a interfaz para que sea mas sencillo identificar los paquetes
