@@ -1,15 +1,15 @@
 ID grupo (1 byte),Codigo de sensor (1 byte),Tipo de sensor,Tipo de dato,Grupo
-0,0,Keep Alive,N/A,N/A
-1,1,Movimiento,Booleano,Whitenoise
-1,2,Sonido (Big Sound),Booleano,Whitenoise
-2,1,Movimiento,Booleano,FlamingoBlack
-2,3,Luz (Fotoresistor),Booleano,FlamingoBlack
-3,1,Movimiento,Booleano,GISSO
-3,4,Shock,Booleano,GISSO
-4,1,Movimiento,Booleano,KOF
-4,5,Touch,Booleano,KOF
-5,1,Movimiento,Booleano,Equipo 404
-5,6,Humedad,Float,Equipo 404
-5,8,Temperatura,Float,Equipo 404
-6,9,Ultrasonico,Entero,Poffis
-6,7,Big sound,Entero,Poffis
+0,0,Keep Alive,-1,N/A
+1,1,Movimiento,0,Whitenoise
+1,2,Sonido (Big Sound),0,Whitenoise
+2,1,Movimiento,0,FlamingoBlack
+2,3,Luz (Fotoresistor),0,FlamingoBlack
+3,1,Movimiento,0,GISSO
+3,4,Shock,0,GISSO
+4,1,Movimiento,0,KOF
+4,5,Touch,0,KOF
+5,1,Movimiento,0,Equipo 404
+5,6,Humedad,1,Equipo 404
+5,8,Temperatura,1,Equipo 404
+6,9,Ultrasonico,2,Poffis
+6,7,Big sound,2,Poffis

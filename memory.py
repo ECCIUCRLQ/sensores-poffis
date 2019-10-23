@@ -2,8 +2,8 @@ import csv
 import numpy as matrix
 import os
 
-MAX_PAGE_COUNT = 10000
-MAIN_MEMORY_PAGE_COUNT = 1000
+MAX_PAGE_COUNT = 10
+MAIN_MEMORY_PAGE_COUNT = 10
 INFO_PER_PAGE = 2
 MAIN_MEMORY = 0
 SECONDARY_MEMORY = 1
@@ -23,9 +23,10 @@ class MemoryManager:
 		self.frameTable[pageNumber][1] = secondaryMemory
 	
 	def createNewPage(self): 
+		print("Older: ", self.olderPageIndex)
 		if self.lastPageCreated < MAX_PAGE_COUNT: 
 			self.lastPageCreated += 1 
-			newPage = open( str(self.lastPageCreated) + ".csv", "a" )
+			newPage = open( str(self.lastPageCreated) + ".csv", "a", encoding='utf-8')
 			
 			if self.olderPageIndex < MAIN_MEMORY_PAGE_COUNT:
 				self.mainMemory.append(newPage)
@@ -49,11 +50,16 @@ class MemoryManager:
 		
 	def writePage(self, pageNumber, date, data, offset): 
 		packageInfo = [date,data]
-
+		print(self.frameTable)
+		#print("Page Number: ", pageNumber, "Date: ", date," and Data: ", data)
 		if self.frameTable[pageNumber][1] == 0: # Si la página está en memoria principal.
+			#print("Main Memory")
+			print("Page Number: ", pageNumber)
 			pageToWrite = self.mainMemory[ self.frameTable[pageNumber][0] ]
+			#print(os.path.basename(pageToWrite.name))
 			csvWriter = csv.writer(pageToWrite)	
 		else: # Si la página está en memoria secundaria.
+			#print("Not main memory")
 			mainMemIndex = self.olderPageIndex % MAIN_MEMORY_PAGE_COUNT
 			pageName = self.mainMemory[mainMemIndex].name
 			mainMemoryPageNumber = int( os.path.basename(pageName).rsplit('.',1)[0] ) 
@@ -62,9 +68,13 @@ class MemoryManager:
 			mainMemoryPageNumber = int( os.path.basename(pageName).rsplit('.',1)[0] ) 
 			pageToWrite = self.mainMemory[ self.frameTable[mainMemoryPageNumber][0] ]
 			csvWriter = csv.writer(pageToWrite)
-		
-		csvWriter.writerow(packageInfo)
-		self.olderPageIndex += 1
+			self.olderPageIndex += 1
+		#print("Package information: ", packageInfo)
+		try:
+			csvWriter.writerow(packageInfo)
+		except csv.Error as e:
+			print("Failed to write")
+		pageToWrite.flush() 
 			
 	def doSwap(self, pageMainMem, pageSecondMem, mainMemIndex, secondMemIndex):
 		temp = self.mainMemory[mainMemIndex]
@@ -93,23 +103,23 @@ class MemoryManager:
 			dataBuffer.append(currentLine[1])
 		return dataBuffer
 
-#kappa = MemoryManager()
-#kappa.createNewPage()
-#print(kappa.frameTable)
-#print()
-#kappa.createNewPage()
-#print(kappa.frameTable)
-#print()
-#kappa.createNewPage()
-#print(kappa.frameTable)
-#print()
-#kappa.createNewPage()
-#print(kappa.frameTable)
-#print()
-#kappa.createNewPage()
-#print(kappa.frameTable)
-#print()
-#kappa.writePage(0,1,1,0)
-#kappa.writePage(0,1,0,0)
-#print( kappa.sendPageToInterface(0) )
-#kappa.writePage(0,2,10,0)
+"""kappa = MemoryManager()
+kappa.createNewPage()
+print(kappa.frameTable)
+print()
+kappa.createNewPage()
+print(kappa.frameTable)
+print()
+kappa.createNewPage()
+print(kappa.frameTable)
+print()
+kappa.createNewPage()
+print(kappa.frameTable)
+print()
+kappa.createNewPage()
+print(kappa.frameTable)
+print()
+kappa.writePage(0,1571853632, 777, 0)
+kappa.writePage(0,1571853633, 3154,0)
+print( kappa.sendPageToInterface(0) )
+kappa.writePage(0,1571853634,777,0)"""

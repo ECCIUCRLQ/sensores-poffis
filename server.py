@@ -9,6 +9,7 @@ from datetime import datetime
 from interface import Interface
 from collectors import Collectors
 from plotter import Plotter
+from memory import MemoryManager
 
 UDP_IP = "127.0.0.1"#"10.1.138.34"
 UDP_PORT = 5003
@@ -41,6 +42,7 @@ def recv_package():
 			date = receive_data[1]
 			sensorID = receive_data[2]
 			sensor_type = receive_data[3]
+			#print("SensorID:", sensorID, " sensorType: ",sensor_type)
 			data = receive_data[4]
 			ACK = struct.unpack('>H',b'\x00' + randomID)[0]
 			sensor_type = struct.unpack('>H',b'\x00' + sensor_type)[0]
@@ -70,7 +72,7 @@ def recv_package():
 				sock.sendto(packedData, addr)
 				#actualiza el ACK para ver si es un paquete repetido
 				lastACK = ACK
-				package = [date,sensor_type,team,sensor_identification,data,0]
+				package = [date,team,sensor_identification,sensor_type,data,0]
 				#entra a un mutex para añadir a la cola
 				lock.acquire
 				#si no es un keep alive, añade el paquete a la cola de paquetes
@@ -96,18 +98,20 @@ def main():
 	interface_queue = queue.Queue(queue_size)
 	collectors = Collectors()
 	collectors_info = collectors.initializer(interface_queue)
-	#print("a")
 	
+	memoryManager = MemoryManager()
+
 	#Por cuestiones de comodidad se inicializa acá pero no se usa posteriormente.
 	interface = Interface()
-	interface.initializer(interface_queue, collectors_info)
+	interface.initializer(interface_queue, collectors_info, memoryManager)
+
 	plotter = Plotter()
 	plotter.initializer(interface)
 	
-	#print("b")
 	while True:		
 		with open('identificadores.csv', 'r') as csv_file:
 			csv_reader = csv.reader(csv_file,delimiter = ',')
+			next(csv_reader)
 			next(csv_reader)
 			semaphore.acquire()
 			#cierra el mutex, saca el paquete respectivo de la cola, y lo vuelve a abrir
@@ -116,20 +120,16 @@ def main():
 			lock.release
 			#Si hubo un timeout, el servidor termina su ejecución; si no, imprime el paquete.
 			timeout = package[5]
-			#print("e")
 			if(timeout == 0):
-				#print(":D")
 				#Multiplexor: Envia el paquete a su cola correspondiente
 				for line in collectors_info:
-					#print("Sera?")
 					plot_data=[package[0],package[4]]
-					if(line[0] == package[2] and line[1] == package[1]):
-						#print("c")
-						line[3].acquire()
-						line[2].put(plot_data)
-						line[3].notify()
-						line[3].release()
-						#print("d")
+					#print(plot_data)
+					if(line[0] == package[1] and line[1] == package[2] and line[2] == package[3]):
+						line[4].acquire()
+						line[3].put(plot_data)
+						line[4].notify()
+						line[4].release()
 			else:
 				print("cliente caido")
 				break

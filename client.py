@@ -19,12 +19,12 @@ UDP_PORT = 5003
 
 # SensorID = TEAM_ID + MOVEMENT_SENSOR || TEAM_ID + SOUND_SENSOR
 TEAM_ID = 6
-MOVEMENT_SENSOR = 1
-SOUND_SENSOR = 2
+MOVEMENT_SENSOR = 9
+SOUND_SENSOR = 7
 
 # Type = MOVEMENT_DATA_TYPE || SOUND_DATA_TYPE || KEEP_ALIVE
-MOVEMENT_DATA_TYPE = 9
-SOUND_DATA_TYPE = 7
+MOVEMENT_DATA_TYPE = 2
+SOUND_DATA_TYPE = 2
 KEEP_ALIVE_TYPE = 0
 
 # Creacion de un queue donde se guardan los paquetes a enviar.
@@ -67,6 +67,7 @@ def createPackage(sensorType, lastRID, sensorInstance = None):
 		values = ( randomID, int(time.time()), bytearray([TEAM_ID, 0, 0, MOVEMENT_SENSOR]), chr(MOVEMENT_DATA_TYPE).encode(), MovementSensor.getMovementData(MovementSensor) )
 	elif sensorType == SOUND_SENSOR : # Se crea un paquete con un dato del sensor de sonido.
 		values = ( randomID, int(time.time()), bytearray([TEAM_ID, 0, 0, SOUND_SENSOR]), chr(SOUND_DATA_TYPE).encode(),  SoundSensor.getSoundData(SoundSensor) )
+		#values = (randomID, int(time.time()), bytearray([TEAM_ID, 0, 0, ]))
 	else:								# Se crea un paquete de KEEP ALIVE. 
 		values = ( randomID, int(time.time()), bytearray([TEAM_ID, 0, 0, 0]), chr(KEEP_ALIVE_TYPE).encode(), 0)
 	lastRID = randomID
