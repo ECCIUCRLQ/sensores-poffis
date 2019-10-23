@@ -2,16 +2,10 @@ import struct
 import sys
 import queue
 import threading
-import csv
+import csv 
 
 queue_size=1000
 
-def threaded(collect):
-	def wrapper(thread_id, collector_queue ,interface_queue, condition):
-		thread = threading.Thread(target=collect, args=(thread_id, collector_queue ,interface_queue, condition))
-		thread.start()
-		return thread
-	return wrapper
 
 class Collectors:
 	#Recibe la cola a donde debe enviar sus paquetes
@@ -63,7 +57,6 @@ class Collectors:
 			#Si la cola esta vacia el thread no consume procesamiento
 			condition.acquire()
 			if(collector_queue.empty()):
-				print("abecede")
 				condition.wait()
 			#Se le pasa el thread_id a interfaz para que sea mas sencillo identificar los paquetes
 			data_card = [collector_queue.get(),thread_id]

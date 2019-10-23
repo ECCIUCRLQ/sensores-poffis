@@ -8,6 +8,7 @@ import csv
 from datetime import datetime
 from interface import Interface
 from collectors import Collectors
+from plotter import Plotter
 
 UDP_IP = "127.0.0.1"#"10.1.138.34"
 UDP_PORT = 5003
@@ -100,6 +101,9 @@ def main():
 	#Por cuestiones de comodidad se inicializa acá pero no se usa posteriormente.
 	interface = Interface()
 	interface.initializer(interface_queue, collectors_info)
+	plotter = Plotter()
+	plotter.initializer(interface)
+	
 	#print("b")
 	while True:		
 		with open('identificadores.csv', 'r') as csv_file:
