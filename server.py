@@ -118,14 +118,11 @@ def main():
 				#Multiplexor: Envia el paquete a su cola correspondiente
 				for line in collectors_info:
 					#print("Sera?")
-					"""if line[0] == 6:
-						print(package)
-						print(line[0], package[1])
-						print(line[1], package[2])"""
+					plot_data=[package[0],package[4]]
 					if(line[0] == package[2] and line[1] == package[1]):
 						#print("c")
 						line[3].acquire()
-						line[2].put(package)
+						line[2].put(plot_data)
 						line[3].notify()
 						line[3].release()
 						#print("d")

@@ -23,7 +23,7 @@ class Collectors:
 		#Abrimos el csv para crear la tabla de informacion de los recolectores
 		with open('identificadores.csv', 'r') as csv_file:
 			csv_reader = csv.reader(csv_file,delimiter = ',')
-			#Saltamos encabezados del csv
+			#Saltamos encabezados del csv y 
 			next(csv_reader)
 			next(csv_reader)
 			#El siguiente for crea la matriz(tabla) donde se va a guardar la informacion
@@ -66,8 +66,8 @@ class Collectors:
 				print("abecede")
 				condition.wait()
 			#Se le pasa el thread_id a interfaz para que sea mas sencillo identificar los paquetes
-			packet = [collector_queue.get(),thread_id]
-			interface_queue.put(packet)
+			data_card = [collector_queue.get(),thread_id]
+			interface_queue.put(data_card)
 			condition.release()
 				
 				
