@@ -5,8 +5,8 @@ import threading
 import csv
 
 pages_in_system = 1000
-sensorRequestedData = -1   # Hubo / Cual sensor solicito datos
 pageSize = 691200  # Taman~o era de 691200B, Pagina de 192000 caracteres 
+lock = threading.Lock()
 
 class Interface:
 	#La cola se recibe como parametro ya que fue creada por el servidor para 
@@ -15,43 +15,52 @@ class Interface:
 	#[Thread_id, offset, pages_owned]
 	def initializer(self, interface_queue, collectors_info):
 		id_table=[]
+		counter = 0
 		for entry in collectors_info:  
-			pages_owned = []
+			pages_owned = [counter]
+			counter += 1
 			row = [entry[4] ,0,  pages_owned]
 			id_table.append(row)
 		thread=threading.Thread(target=self.run, args =(interface_queue, id_table) )
-		thread.start
+		thread.start()
 	
 	def run(self, interface_queue, id_table):
-		while True:
-			if sensorRequestedData > -1: # Solicitud
-				axisX = [] # Unir todos los datos eje X
-				axisY = [] # Unir todos los datos eje Y
-				a = [1,2,3]
-				for x in len(id_table[sensorRequestedData][2]):
-					data.extend(a)
-					
-				# Solicitar paginas del sensor que pidio data, una por una.
-			elif not interface_queue.Empty(): # Ingreso
-				data_card = interface_queue.get()
-				print(data_card)
-				spaceUsed = id_table[data_card[1]][1]
-				sensorPages = id_table[data_card[1]][2]
-				currentPage = sensorPages[len(sensorPages)-1]
-				if pageSize > spaceUsed: # Hay espacio
-					b = 2
-					# Enviar direccion logica (Pagina actual) y offset (spaceUsed).
-				else: 					# No hay espacio
-					c = 3 
-					# Pide nueva pagina
-				numberReceived = -1
-				while numberReceived == -1:
-					if numberReceived == currentPage:
-						id_table[data_card[1]][1] += sys.getsizeof(data_card[0])
-					elif numberReceived != -1:
-						sensorPages.append(numberReceived)
+		thread = threading.Thread(target=self.plotRequested)
+		thread.start()
+		thread = threading.Thread(target=self.dataEntry, args=(interface_queue,id_table) )
+		thread.start()
+		sensorRequestedData = -1   # Hubo / Cual sensor solicito datos
 
-			#Buscar en la tabla a quien pertenece
-			#Comprobar que la pagina tiene espacio
-			#Pedir más espacio y guardar o solo guardar 
+	def plotRequested(self):
+		sensorRequestedPlot = -1
+		while True:
+			sensorRequestedPlot = int(input()) # Funcion de Graficador solitando hacer plot
+			if sensorRequestedPlot > -1:
+				lock.acquire()
+				# Pedir paginas uno a uno	
+				lock.release()	
+
+	def dataEntry(self, interface_queue, id_table):
+			while True:
+				if not interface_queue.empty():
+					data_card = interface_queue.get()
+					spaceUsed = id_table[data_card[1]][1]
+					sensorPages = id_table[data_card[1]][2]
+					currentPage = sensorPages[len(sensorPages)-1]
+					numberReceived = -1
+					if pageSize > spaceUsed: # Hay espacio
+						lock.acquire()
+						# currentPage,spaceUsed
+						# Enviar direccion logica (Pagina actual) y offset (spaceUsed).
+						# numberReceived = funcion que retorna numero de pagina
+						id_table[data_card[1]][1] += sys.getsizeof(data_card[0])
+						lock.release()
+					else: 					# No hay espacio
+						lock.acquire()
+						# Pide nueva pagina
+						# numberReceived = funcion que retorna numero de pagina 
+						sensorPages.append(numberReceived)
+						id_table[data_card[1]][1] = sys.getsizeof(data_card[0])
+						lock.release()
+
 	
