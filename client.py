@@ -14,17 +14,17 @@ from datetime import datetime
 
 # Creacion del socket, definicion de IP y puerto del servidor.
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
-UDP_IP = "127.0.0.1"			 
-UDP_PORT = 5015	 
+UDP_IP = "127.0.0.1"#"10.1.138.229"#"127.0.0.1"			 
+UDP_PORT = 5015
 
 # SensorID = TEAM_ID + MOVEMENT_SENSOR || TEAM_ID + SOUND_SENSOR
 TEAM_ID = 6
-MOVEMENT_SENSOR = 9
-SOUND_SENSOR = 7
+MOVEMENT_SENSOR = 1
+SOUND_SENSOR = 2
 
 # Type = MOVEMENT_DATA_TYPE || SOUND_DATA_TYPE || KEEP_ALIVE
-MOVEMENT_DATA_TYPE = 2
-SOUND_DATA_TYPE = 2
+MOVEMENT_DATA_TYPE = 9
+SOUND_DATA_TYPE = 7
 KEEP_ALIVE_TYPE = 0
 
 # Creacion de un queue donde se guardan los paquetes a enviar.
