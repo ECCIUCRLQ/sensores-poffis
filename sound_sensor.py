@@ -3,10 +3,10 @@
 # License: Public Domain
 
 # Import the ADS1x15 module.
-import Adafruit_ADS1x15
+#import Adafruit_ADS1x15          #DESCOMENTAR
 
 # Create an ADS1115 ADC (16-bit) instance.
-adc = Adafruit_ADS1x15.ADS1115()
+#adc = Adafruit_ADS1x15.ADS1115() #DESCOMENTAR
 
 # Sensibilidad del sensor de sonido.
 GAIN = 1
@@ -29,7 +29,8 @@ class SoundSensor:
       -  16 = +/-0.256V
     """
     def getSoundData(self):
-      return adc.read_adc(0,GAIN)
+      return 3154
+      #return adc.read_adc(0,GAIN)
     
 
 

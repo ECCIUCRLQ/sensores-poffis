@@ -15,7 +15,7 @@ from datetime import datetime
 # Creacion del socket, definicion de IP y puerto del servidor.
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
 UDP_IP = "127.0.0.1"			 
-UDP_PORT = 5003 			 
+UDP_PORT = 5015	 
 
 # SensorID = TEAM_ID + MOVEMENT_SENSOR || TEAM_ID + SOUND_SENSOR
 TEAM_ID = 6
@@ -82,6 +82,7 @@ def sendPackage():
 	else: # Si no envía un paquete de tipo KEEP ALIVE, para indicar que el cliente sigue vivo pero no hay paquetes por enviar.
 		packet, lastRID = createPackage(KEEP_ALIVE_TYPE, lastRID)	
 	sock.sendto(packet, (UDP_IP, UDP_PORT))
+	print(packet)
 	return packet, True, lastRID
 
 def main():

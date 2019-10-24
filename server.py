@@ -12,9 +12,10 @@ from plotter import Plotter
 from memory import MemoryManager
 
 UDP_IP = "127.0.0.1"#"10.1.138.34"
-UDP_PORT = 5003
+UDP_PORT = 5015
 #struct datos recibidos-datos enviados
-carretaInt = struct.Struct('1s I 4s 1s I') 
+carretaInt = struct.Struct('1s I 4s 1s I')
+carretaFloat = struct.Struct('1s I 4s 1s f') 
 bueyPack = struct.Struct('1s 4s')
 
 sock = socket.socket(socket.AF_INET, # Internet
@@ -42,10 +43,14 @@ def recv_package():
 			date = receive_data[1]
 			sensorID = receive_data[2]
 			sensor_type = receive_data[3]
-			#print("SensorID:", sensorID, " sensorType: ",sensor_type)
-			data = receive_data[4]
-			ACK = struct.unpack('>H',b'\x00' + randomID)[0]
 			sensor_type = struct.unpack('>H',b'\x00' + sensor_type)[0]
+			#print("SensorID:", sensorID, " sensorType: ",sensor_type)
+			if((sensor_type) ==  1):
+				unpackedData = carretaFloat.unpack(data)
+				receive_data = list(unpackedData)
+			data = receive_data[4]
+			ACK = struct.unpack('>H',b'\x00' + randomID)[0]	
+			#print(type(sensor_type))
 			bytes_from_sensorID = bytes(sensorID)
 			team = bytes_from_sensorID[0]
 			#bytes de sensorID sin incluir la parte de equipo(los 3 bytes)
@@ -101,12 +106,12 @@ def main():
 	
 	memoryManager = MemoryManager()
 
+	plotter = Plotter()
+
 	#Por cuestiones de comodidad se inicializa acá pero no se usa posteriormente.
 	interface = Interface()
-	interface.initializer(interface_queue, collectors_info, memoryManager)
-
-	plotter = Plotter()
-	plotter.initializer(interface)
+	#plotter.initializer(interface)
+	interface.initializer(interface_queue, collectors_info, memoryManager, plotter)
 	
 	while True:		
 		with open('identificadores.csv', 'r') as csv_file:
@@ -122,6 +127,7 @@ def main():
 			timeout = package[5]
 			if(timeout == 0):
 				#Multiplexor: Envia el paquete a su cola correspondiente
+				#print(package)
 				for line in collectors_info:
 					plot_data=[package[0],package[4]]
 					#print(plot_data)
@@ -142,7 +148,11 @@ main()
 		
 
 
-
+def bytes_to_int(bytes):
+	result = 0
+	for b in bytes:
+		result = result * 256 + int(b)
+	return result
 	
 
 """Protocolo del cliente al servidor	

@@ -7,7 +7,7 @@ import random
 import string
 import threading
 import queue
-import RPi.GPIO as GPIO # DESCOMENTAR
+#import RPi.GPIO as GPIO # DESCOMENTAR
 
 # Sensor constants.
 PATH_LENGTH = 50
@@ -70,7 +70,8 @@ class MovementSensor:
 		
 	"""			
 	def getMovementData(self):
-		return lectures_queue.get(True)
+		return 777
+		#return lectures_queue.get(True)
 	
 	"""
 	Initializer of the thread that execute lectures constantly

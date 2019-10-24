@@ -23,7 +23,6 @@ class MemoryManager:
 		self.frameTable[pageNumber][1] = secondaryMemory
 	
 	def createNewPage(self): 
-		print("Older: ", self.olderPageIndex)
 		if self.lastPageCreated < MAX_PAGE_COUNT: 
 			self.lastPageCreated += 1 
 			newPage = open( str(self.lastPageCreated) + ".csv", "a", encoding='utf-8')
@@ -50,16 +49,10 @@ class MemoryManager:
 		
 	def writePage(self, pageNumber, date, data, offset): 
 		packageInfo = [date,data]
-		print(self.frameTable)
-		#print("Page Number: ", pageNumber, "Date: ", date," and Data: ", data)
 		if self.frameTable[pageNumber][1] == 0: # Si la página está en memoria principal.
-			#print("Main Memory")
-			print("Page Number: ", pageNumber)
 			pageToWrite = self.mainMemory[ self.frameTable[pageNumber][0] ]
-			#print(os.path.basename(pageToWrite.name))
 			csvWriter = csv.writer(pageToWrite)	
 		else: # Si la página está en memoria secundaria.
-			#print("Not main memory")
 			mainMemIndex = self.olderPageIndex % MAIN_MEMORY_PAGE_COUNT
 			pageName = self.mainMemory[mainMemIndex].name
 			mainMemoryPageNumber = int( os.path.basename(pageName).rsplit('.',1)[0] ) 
@@ -69,7 +62,6 @@ class MemoryManager:
 			pageToWrite = self.mainMemory[ self.frameTable[mainMemoryPageNumber][0] ]
 			csvWriter = csv.writer(pageToWrite)
 			self.olderPageIndex += 1
-		#print("Package information: ", packageInfo)
 		try:
 			csvWriter.writerow(packageInfo)
 		except csv.Error as e:

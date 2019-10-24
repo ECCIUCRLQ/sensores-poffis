@@ -26,6 +26,7 @@ class Collectors:
 			# [team, sensor_type, collector_queue, condition_variable, thread_id]
 			# **team: equipo que al que pertenece el sensor
 			# **sensor_type: tipo de sensor
+			# **dataType: tipo del dato
 			# **collector_queue: Cola exclusiva del recolector
 			# **condition_variable: Esta condicion de variable manda a dormir a los threads
 			# cuando sus colas estan vacias
@@ -34,18 +35,19 @@ class Collectors:
 			collectors_info=[]
 			for line in csv_reader:
 				#El thread_id se asigna en el siguiente for, por eso es 0.
-				row = [int(line[0]),int(line[1]),queue.Queue(queue_size),threading.Condition(),0]
+				row = [int(line[0]),int(line[1]), int(line[3]), queue.Queue(queue_size),threading.Condition(),0]
 				collectors_info.append(row)
 				csv_sensor_counter+=1
-				print(csv_sensor_counter)
 			
 			
 			
 			#Crea un thread por cada entrada de la matriz anterior
-			for n_collector_thread in range(csv_sensor_counter-1):
-				collectors_info[n_collector_thread][4] = n_collector_thread
-				thread = threading.Thread(target=self.collect, args =(n_collector_thread, collectors_info[n_collector_thread][2],interface_queue,collectors_info[n_collector_thread][3]) )
+			for n_collector_thread in range(csv_sensor_counter):
+				collectors_info[n_collector_thread][5] = n_collector_thread
+				thread = threading.Thread(target=self.collect, args =(n_collector_thread, collectors_info[n_collector_thread][3],interface_queue,collectors_info[n_collector_thread][4]) )
 				thread.start()
+			"""for x in range(len(collectors_info)):
+				print(collectors_info[x])"""
 			
 			#Se le devuelve al servidor para que pueda multiplexar los paquetes	
 			return collectors_info;
