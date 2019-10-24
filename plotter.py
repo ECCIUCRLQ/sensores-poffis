@@ -11,17 +11,17 @@ import matplotlib.dates as mdates
 
 class Plotter:
 	def plot(self, data,n):
-		fig, subplot = plt.subplots(n)
+		fig, subplot = plt.subplots(n,sharex=True)
 		fig.suptitle('Gráficado por POFFIS')
 		for i in range(0,n):
 			axisX = []
 			axisY = []
 			for x in range(0,len(data[i]),2):
-				if (x % 120 == 0):
-					d = int(data[i][x])
-					date = datetime.utcfromtimestamp(d-21600)
-					axisX.append(date)
-					axisY.append(data[i][x+1])
+				#if (x % 4 == 0):
+				d = int(data[i][x])
+				date = datetime.utcfromtimestamp(d-21600)
+				axisX.append(date)
+				axisY.append(data[i][x+1])
 			subplot[i].plot(axisX,axisY)
 			plt.xlabel("Fechas")
 			plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H:%M - %m/%d/%Y'))

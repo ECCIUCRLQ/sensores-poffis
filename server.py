@@ -11,7 +11,7 @@ from collectors import Collectors
 from plotter import Plotter
 from memory import MemoryManager
 
-UDP_IP = "127.0.0.1"#"10.1.138.34"
+UDP_IP = "10.1.138.34"
 UDP_PORT = 5015
 #struct datos recibidos-datos enviados
 carretaInt = struct.Struct('1s I 4s 1s I')
@@ -45,10 +45,17 @@ def recv_package():
 			sensor_type = receive_data[3]
 			sensor_type = struct.unpack('>H',b'\x00' + sensor_type)[0]
 			#print("SensorID:", sensorID, " sensorType: ",sensor_type)
-			if((sensor_type) ==  1):
+			#print(sensor_type)
+			if((sensor_type) ==  6 or sensor_type == 8):
 				unpackedData = carretaFloat.unpack(data)
 				receive_data = list(unpackedData)
 			data = receive_data[4]
+			#print(type(data))
+			if((sensor_type) ==  2 or sensor_type == 1 or sensor_type == 3 or sensor_type == 4 or sensor_type == 5 ):
+				if data != 0:
+					data = 1
+			#print("Despues")
+				
 			ACK = struct.unpack('>H',b'\x00' + randomID)[0]	
 			#print(type(sensor_type))
 			bytes_from_sensorID = bytes(sensorID)
@@ -70,6 +77,7 @@ def recv_package():
 			#print(ACK)
 			#revisa que no sea un ACK repetido, si lo es simplemente lo ignora
 			if(lastACK != ACK):
+				#print('ACK')
 				#crea y reenvia el ACK
 				newPackage = (randomID, sensorID)
 				packedData = bueyPack.pack(*newPackage)
@@ -131,7 +139,11 @@ def main():
 				for line in collectors_info:
 					plot_data=[package[0],package[4]]
 					#print(plot_data)
-					if(line[0] == package[1] and line[1] == package[2] and line[2] == package[3]):
+					"""print(line[0], package[1])
+					print(line[1], package[2])
+					print(line[2], package[3])"""
+					if(line[0] == package[1] and line[2] == package[2] and line[1] == package[3]):
+						#print("entre")
 						line[4].acquire()
 						line[3].put(plot_data)
 						line[4].notify()

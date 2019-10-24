@@ -36,10 +36,11 @@ class Interface:
 		
 		print("Primer Sensor: ")
 		while True:
-			print("Digite cuandos sensores desea graficar")
+			print("Digite cuantos sensores desea graficar")
 			numSensorsWanted = int(input())
 			data = [None] * numSensorsWanted
-			for x in range(0,numSensorsWanted):				
+			for x in range(0,numSensorsWanted):	
+				print("Digite sensor numero", x, ": ")
 				sensorRequestedPlot = int(input()) #plotter.getRequestedData() # Funcion de Graficador solitando hacer plot
 				if sensorRequestedPlot > -1:
 					counter += 1
@@ -71,12 +72,12 @@ class Interface:
 						# Pide nueva pagina
 						lock.acquire()
 						numberReceived = memoryManager.createNewPage()
-						print(numberReceived)
+						#print(numberReceived)
 						lock.release()
 						if numberReceived != -1:
 							lock.acquire()
 							sensorPages.append(numberReceived)
-							print(sensorPages)
+							#print(sensorPages)
 							memoryManager.writePage(numberReceived, data_card[0][0], data_card[0][1], spaceUsed)
 							lock.release()
 							id_table[data_card[1]][1] = sys.getsizeof(data_card[0])

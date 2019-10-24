@@ -35,7 +35,7 @@ class Collectors:
 			collectors_info=[]
 			for line in csv_reader:
 				#El thread_id se asigna en el siguiente for, por eso es 0.
-				row = [int(line[0]),int(line[1]), int(line[3]), queue.Queue(queue_size),threading.Condition(),0]
+				row = [int(line[0]),int(line[1]), int(line[2]), queue.Queue(queue_size),threading.Condition(),0]
 				collectors_info.append(row)
 				csv_sensor_counter+=1
 			

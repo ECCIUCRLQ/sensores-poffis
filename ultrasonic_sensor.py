@@ -70,7 +70,7 @@ class MovementSensor:
 		
 	"""			
 	def getMovementData(self):
-		return 777
+		return random.randint(1,777)
 		#return lectures_queue.get(True)
 	
 	"""

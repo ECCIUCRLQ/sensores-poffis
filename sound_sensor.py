@@ -4,6 +4,7 @@
 
 # Import the ADS1x15 module.
 #import Adafruit_ADS1x15          #DESCOMENTAR
+import random
 
 # Create an ADS1115 ADC (16-bit) instance.
 #adc = Adafruit_ADS1x15.ADS1115() #DESCOMENTAR
@@ -29,7 +30,7 @@ class SoundSensor:
       -  16 = +/-0.256V
     """
     def getSoundData(self):
-      return 3154
+      return random.randint(1,333)
       #return adc.read_adc(0,GAIN)
     
 
