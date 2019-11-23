@@ -17,26 +17,19 @@ GENERATION_TIME=1
 
 def main():
 	
-	### Leer cuantos sensores hay conectados para poder realizar el handshake(malloc mágico)
-	### Crear barrera con contador = cuantos sensores hay
-	### Crear cola para cada thread
-	### Crear semaforo para cada cola de rocolectores
-	### Crear threads recolectores (se envía de parámetro su cola y su identificador respectivo)
-	#abre el archivo csv en modo lectura
 	interface_queue = queue.Queue(QUEUE_SIZE)
 	memoryManager = MemoryManager()
 	plotter = Plotter()
 	interface = Interface()
-	#plotter.initializer(interface)
 	interface.initializer(interface_queue, collectors_info, memoryManager, plotter)
 
 	
 	while True:
-		#Primer sensor
-		#Paquete compuesto de la fecha y lectura
+		#Package composed by date and data
+		#First sensor
 		package = [int(time.time()),random.randint(100,500)]
 		interface_queue.put(package, 0)
-		#Segundo sensor 
+		#Second sensor 
 		package = [int(time.time()),random.randint(100,500)]
 		interface_queue.put(package, 1)
 		

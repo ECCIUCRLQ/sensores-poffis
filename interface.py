@@ -6,17 +6,23 @@ import csv
 from memory import MemoryManager
 from plotter import Plotter
 
-pages_in_system = 4
-pageSize = 691200  # Taman~o era de 691200B, Pagina de 192000 caracteres 
-lock = threading.Lock()
+PAGES_IN_SYSTEM = 4
+#3600s * 24h * 2ints-of-data
+PAGE_SIZE = 172800
+
+#Flag values
+NOT_FULL = 0
+FULL = 1
 
 class Interface:
+	lock = None
 	#La cola se recibe como parametro ya que fue creada por el servidor para 
 	#compartirla con los recolectores.
 	#Cada linea de la matriz(tabla) de la interfaz es asi:
 	#[Thread_id, offset, pages_owned]
 	def initializer(self, interface_queue, memoryManager, plotter):
 		id_table=[]
+		self.lock = threading.Lock()
 		for sensors in range(2):
 			pages_owned = []#[counter]
 			row = [sensors ,0,  pages_owned]
@@ -29,60 +35,58 @@ class Interface:
 		thread.start()
 		thread = threading.Thread(target=self.dataEntry, args=(interface_queue,id_table, memoryManager) )
 		thread.start()
-		#sensorRequestedData = -1   # Hubo / Cual sensor solicito datos
 
-	def plotRequested(self, id_table, memoryManager, plotter): # Solicitud de graficar
+	def plotRequested(self, id_table, memoryManager, plotter): 
 		sensorRequestedPlot = -1
 		counter = 0
-		
 		print("Primer Sensor: ")
 		while True:
 			print("Digite cuantos sensores desea graficar")
 			numSensorsWanted = int(input())
-			data = [None] * numSensorsWanted #inicialización del vector con nulos, estos van a ser las filas de la matriz
+			plotter.dataBuffer[:]=[]
+			plotter.dataBuffer = [None] * numSensorsWanted 
 			for x in range(0,numSensorsWanted):
 				print("Digite sensor numero", x, ": ")
-				sensorRequestedPlot = int(input()) #plotter.getRequestedData() # Funcion de Graficador solitando hacer plot
+				sensorRequestedPlot = int(input()) 
 				if sensorRequestedPlot > -1:
 					counter += 1
-					data[x] = [] #Aca se le asigna n vector a cada fila para construir las columnas de la matriz
+					plotter.dataBuffer[x] = [] 
 					for v in id_table[sensorRequestedPlot][2]:	
-						lock.acquire()
-						data[x].extend( memoryManager.sendPageToInterface(v) ) #Append de un vector
-						lock.release()	
-						# Pedir paginas uno a uno	
+						self.lock.acquire()
+						plotter.dataBuffer[x].extend( memoryManager.sendPageToInterface(v) )
+						self.lock.release()	
+							
 			if counter == numSensorsWanted:
 				plotter.plot(data,numSensorsWanted)
 				counter = 0
 
-	def dataEntry(self, interface_queue, id_table, memoryManager):  # Ingreso de datos que se van paginar
+	def dataEntry(self, interface_queue, id_table, memoryManager):
 			while True:
 				if not interface_queue.empty():
-					data_card = interface_queue.get()
-					spaceUsed = id_table[data_card[1]][1]
-					sensorPages = id_table[data_card[1]][2]
+					dataCard = interface_queue.get()
+					spaceUsed = id_table[dataCard[1]][1]
+					sensorPages = id_table[dataCard[1]][2]
 					if sensorPages:
 						currentPage = sensorPages[len(sensorPages)-1]
 					numberReceived = -1
-					if pageSize > spaceUsed and spaceUsed > 0: # Hay espacio
-						lock.acquire()
-						memoryManager.writePage(currentPage,  data_card[0][0], data_card[0][1], spaceUsed)
-						lock.release()
-						id_table[data_card[1]][1] += sys.getsizeof(data_card[0])
-					else: 					# No hay espacio
-						# Pide nueva pagina
-						lock.acquire()
-						numberReceived = memoryManager.createNewPage()
-						#print(numberReceived)
-						lock.release()
-						if numberReceived != -1:
-							lock.acquire()
-							sensorPages.append(numberReceived)
-							#print(sensorPages)
-							memoryManager.writePage(numberReceived, data_card[0][0], data_card[0][1], spaceUsed)
-							lock.release()
-							id_table[data_card[1]][1] = sys.getsizeof(data_card[0])
+					if PAGE_SIZE > spaceUsed and spaceUsed > 0:
+						self.lock.acquire()
+						if (spaceUsed + 2) == PAGE_SIZE:
+							memoryManager.writePage(currentPage,  dataCard[0][0], dataCard[0][1], spaceUsed, FULL)
 						else:
+							memoryManager.writePage(currentPage,  dataCard[0][0], dataCard[0][1], spaceUsed, NOT_FULL)
+						id_table[dataCard[1]][1] += 2
+						self.lock.release()
+					else:
+						self.lock.acquire()
+						numberReceived = memoryManager.createNewPage()
+						if numberReceived != -1:
+							sensorPages.append(numberReceived)
+							memoryManager.writePage(numberReceived, dataCard[0][0], dataCard[0][1], spaceUsed, NOT_FULL)
+							id_table[dataCard[1]][1] += 2
+							self.lock.release()
+						else:
+							self.lock.release()
 							print("Not enough space.")
 
 	

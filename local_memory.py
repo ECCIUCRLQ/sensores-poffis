@@ -2,22 +2,20 @@ import csv
 import numpy as matrix
 import os
 from local_memory_protocol import LocalMemoryProtocol 
-
-#Solo pueden haber dos páginas para escribir
-MAIN_MEM_PAG_CAP = 4 
-#Dos se reservan para escritura 
+ 
+#Two of the four pages of main memory are reserved to write ops 
 MAIN_MEM_PAG_WRT = 2
-#Dos se reservan para lectura
+#Two of the four pages of main memory are reserved to read ops
 MAIN_MEM_PAG_RED = 2
-#Número arbitrario
+#Arbitrary number, represent the max page capacity the system can handle 
 SYS_PAG_CAP=100
-#3600s*24h*2 ints de datos
+#3600s * 24h * 2ints-of-data
 PAG_SZE=172800
-#Location flag | Reservation Status Flag
+#Location flag | Capacity Flag
 #Identifier is given by the position in the array 
 INFO_PER_PAGE = 2
 
-
+#Flag values
 MAIN_MEMORY = 0
 SECONDARY_MEMORY = 1
 NOT_FULL = 0
@@ -27,44 +25,30 @@ FULL = 1
 class MemoryManager:
 	
 	def __init__(self):
-		#La bandera de localizaión es 0 memoria pricipal y 1 es memoria secundaria
-		self.frameTable = matrix.zeros( shape = (SYS_PAG_CAP, INFO_PER_PAGE), dtype = int )  		
-		#El más uno es porque cada bloque va tener un identificador con la página que tiene, mapeo directo ya no aplica 
+		self.frameTable = matrix.zeros( shape = (SYS_PAG_CAP, INFO_PER_PAGE), dtype = int )  		 
 		self.mainMemory = matrix.zeros( shape = (4, PAG_SZE+1), dtype = int )
-		#@self.secondaryMemory = [] 
 		self.nextId = 0
 		self.olderPageBrought = 0
 		self.messenger = LocalMemoryProtocol() 
 	
-	def updateFrameTable(self, pageNumber, location, rsrv_stus):
+	def updateFrameTable(self, pageNumber, location, cap_stat):
 		self.frameTable[pageNumber][0] = location
-		self.frameTable[pageNumber][1] = rsrv_stus
+		self.frameTable[pageNumber][1] = cap_stat
 	
-	#TODO Acá se hace una competencia para ver donde se va guardar la página nueva, importante para el proceso de que dos espacios son para guardar memoria y el resto es para leer	
-	#TODO Este método puede quedar igual solo que a pesar de que hay 4 páginas, se debe solo con las dos primeras, MAIN_MEMORY_PAGE_COUNT debe ser 2.
 	def createNewPage(self): 
-		if self.nextId < SYS_PAG_CAP: 
-			#@newPage = open( str(self.nextId) + ".csv", "a", encoding='utf-8') #Cada página se crea como un archiv de forma num_pag.csv
-			
+		if self.nextId < SYS_PAG_CAP:
 			#This is useful when the MM is not totally assigned 
 			if self.nextId < MAIN_MEM_PAG_WRT: 
 				self.mainMemory[self.nextId][0]=self.nextId
 				self.updateFrameTable(self.nextId, MAIN_MEMORY, NOT_FULL)
-				
-			
 			else:
-				#@pageToReplace = self.olderPageBrought % MAIN_MEMORY_PAGE_COUNT #Se busca la poscion de la página más vieja
 				pageToReplace = self.search_full_pag()
 				self.sendToSecondaryMemory(pageToReplace) #Se envía a memoria secundaria
 				self.updateFrameTable(self.mainMemory[pageIndex][0], SECONDARY_MEMORY, FULL)
 				self.mainMemory[pageToReplace][0] = self.nextId
 				self.updateFrameTable(self.nextId, MAIN_MEMORY, NOT_FULL)
-				#@self.mainMemory[pageToReplace] = newPage #Se pone el buffer en la memoria principal 
-
-			#@self.updateFrameTable(self.nextId, self.olderPageBrought % MAIN_MEMORY_PAGE_COUNT , MAIN_MEMORY)
 			
 			self.nextId += 1
-			#@self.olderPageBrought += 1
 			return self.nextId-1
 		else: 
 			return -1
@@ -76,67 +60,47 @@ class MemoryManager:
 			if self.frameTable[pagNumber][1] == FULL:
 				return memIndx
 		
-		return -1		
-		
-				
-		
-	
-	#Cuando se lee de memoria secundaria no importa porque nunca hay que sobre-escribir
-	#TODO cuando se lee una página decidir si se actuliza la tabla, porque luego es difícil consegir la dirección en memoria secundaria orginal. Es mejor que no, solo el bit de la bandera, pero  		eso afecta como se direcciona en la memoria secundaria ya que las direcciones secundarias son diferentes a los índices de memoria principal
+		return -1				
+
+
 	def sendToSecondaryMemory(self, pageToReplace):
 		self.messenger.pagesToSave.put(self.mainMemory[pageToReplace])
-		#Leer de la cola, se cambia por un semáforo
-		#@self.secondaryMemory.append( self.mainMemory[pageToReplace] ) #se pone el buffer en el arreglo de memoria secundaria
-		self.updateFrameTable(pageToReplace, len(self.secondaryMemory) - 1, SECONDARY_MEMORY) #La dirección en memoria secundaria es el tamaño del buffer, esa dirección nunca cambia luego
-		
+		self.messenger.okeyAlreadyRead.acquire()
+		self.updateFrameTable(pageToReplace, len(self.secondaryMemory) - 1, SECONDARY_MEMORY)
+
 	#Since straight targeting is no loger used this method is needed to find the position of a page in MM 
 	def get_MM_index(self, pageNumber):
 		for memIndx in range(MAIN_MEM_PAG_WRT):
 			if self.mainMemory[mem_indx][0] == pageNumber:
 				return memIndx
-	
+
 	#Since no page can be sent to secondary memory in a state different from full, page to be written must be always in main memory	
-	def writePage(self, pageNumber, date, data, offset): º
-		if self.frameTable[pageNumber][0] == MAIN_MEMORY: # Si la página está en memoria principal.
+	def writePage(self, pageNumber, date, data, offset, cap_stat):
+		if self.frameTable[pageNumber][0] == MAIN_MEMORY:
 			postion = self.get_MM_index(pageNumber)
 			self.mainMemory[position][offset]=date
-			self.mainMemory[position][offset+1]=date
-			
+			self.mainMemory[position][offset+1]=data
+			self.updateFrameTable(pageNumber, MAIN_MEMORY, cap_stat)
+		
 		else: 
 			print("Fail to write")
-			
-	def doSwap(self, pageMainMem, pageSecondMem, mainMemIndex, secondMemIndex):
-		temp = self.mainMemory[mainMemIndex]
-		self.mainMemory[mainMemIndex] = self.secondaryMemory[secondMemIndex]
-		self.secondaryMemory[secondMemIndex] = temp
-		self.updateFrameTable(pageMainMem, secondMemIndex, SECONDARY_MEMORY)
-		self.updateFrameTable(pageSecondMem, mainMemIndex, MAIN_MEMORY)
-	
-		
-	#@def sendPageToInterface(self, pageNumber): # Enviar página de memoria principal a interfaz
+
 	def requestPage(self, pageNumber):
-		
-		if self.frameTable[pageNumber][0] == MAIN_MEMORY:  #Se comprueba si está en la memoria principal
+		if self.frameTable[pageNumber][0] == MAIN_MEMORY:
 			postion = self.get_MM_index(pageNumber)
-			dataBuffer = main_memory[position]
-			
-			#@pageName = self.mainMemory[ self.frameTable[pageNumber][0] ].name #name es el nombre del archivo de donde está la página
-			#@page = int( os.path.basename(pageName).rsplit('.',1)[0] )
-			#@self.mainMemory[ self.frameTable[pageNumber][0] ].seek(0)
+			dataBuffer = self.main_memory[position]
 		else:
 			self.messenger.requestedPages.put(pageNumber)
+			while True:
+				#Watch out for race conditions  
+				if not self.messenger.requestedPages.empty():
+					break
 			position = self.olderPageBrought % 2 + 2
-			self.mainMemory[position] = 
-			pageName = self.secondaryMemory[ self.frameTable[pageNumber][0] ].name
-			page = int( os.path.basename(pageName).rsplit('.',1)[0] )
-			self.secondaryMemory[ self.frameTable[pageNumber][0] ].seek(0)
-		
-		# Posiciones pares contienen la fecha e impares el dato.
-		csv_file =  open( str(page) + ".csv", 'r' ) 
-		csvReader = csv.reader(csv_file)
-		for currentLine in csvReader:
-			dataBuffer.append(currentLine[0])
-			dataBuffer.append(currentLine[1])
+			self.updateFrameTable(self.mainMemory[position][0], SECONDARY_MEMORY, FULL)
+			self.mainMemory[position] = self.messenger.requestedPages.get()
+			self.updateFrameTable(self.mainMemory[position][0], MAIN_MEMORY, FULL)
+			dataBuffer = self.mainMemory[position]
+			self.olderPageBrought += 1
 		return dataBuffer
 
 """kappa = MemoryManager()
