@@ -6,7 +6,7 @@ import csv
 from memory import MemoryManager
 from plotter import Plotter
 
-pages_in_system = 1000
+pages_in_system = 4
 pageSize = 691200  # Taman~o era de 691200B, Pagina de 192000 caracteres 
 lock = threading.Lock()
 
@@ -15,12 +15,13 @@ class Interface:
 	#compartirla con los recolectores.
 	#Cada linea de la matriz(tabla) de la interfaz es asi:
 	#[Thread_id, offset, pages_owned]
-	def initializer(self, interface_queue, collectors_info, memoryManager, plotter):
+	def initializer(self, interface_queue, memoryManager, plotter):
 		id_table=[]
-		for entry in collectors_info:  
+		for sensors in range(2):
 			pages_owned = []#[counter]
-			row = [entry[4] ,0,  pages_owned]
+			row = [sensors ,0,  pages_owned]
 			id_table.append(row)
+
 		self.run(interface_queue, id_table, memoryManager, plotter)
 	
 	def run(self, interface_queue, id_table, memoryManager, plotter):

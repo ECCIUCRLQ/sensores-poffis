@@ -23,7 +23,7 @@ class Collectors:
 			#El siguiente for crea la matriz(tabla) donde se va a guardar la informacion
 			#de los recolectores
 			#Cada fila de la matriz es un recolector y lucirian asi:
-			# [team, sensor_type, collector_queue, condition_variable, thread_id]
+			# [team, sensor_type, dataType, collector_queue, condition_variable, thread_id]
 			# **team: equipo que al que pertenece el sensor
 			# **sensor_type: tipo de sensor
 			# **dataType: tipo del dato
@@ -50,7 +50,7 @@ class Collectors:
 				print(collectors_info[x])"""
 			
 			#Se le devuelve al servidor para que pueda multiplexar los paquetes	
-			return collectors_info;
+			return collectors_info
 		
 		
 	def collect(self, thread_id, collector_queue ,interface_queue, condition):
