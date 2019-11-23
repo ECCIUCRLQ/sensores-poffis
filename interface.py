@@ -38,16 +38,16 @@ class Interface:
 		while True:
 			print("Digite cuantos sensores desea graficar")
 			numSensorsWanted = int(input())
-			data = [None] * numSensorsWanted
-			for x in range(0,numSensorsWanted):	
+			data = [None] * numSensorsWanted #inicialización del vector con nulos, estos van a ser las filas de la matriz
+			for x in range(0,numSensorsWanted):
 				print("Digite sensor numero", x, ": ")
 				sensorRequestedPlot = int(input()) #plotter.getRequestedData() # Funcion de Graficador solitando hacer plot
 				if sensorRequestedPlot > -1:
 					counter += 1
-					data[x] = []
+					data[x] = [] #Aca se le asigna n vector a cada fila para construir las columnas de la matriz
 					for v in id_table[sensorRequestedPlot][2]:	
 						lock.acquire()
-						data[x].extend( memoryManager.sendPageToInterface(v) )
+						data[x].extend( memoryManager.sendPageToInterface(v) ) #Append de un vector
 						lock.release()	
 						# Pedir paginas uno a uno	
 			if counter == numSensorsWanted:
