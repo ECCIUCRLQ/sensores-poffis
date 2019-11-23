@@ -43,6 +43,11 @@ class FileSystem:
         self.file.seek(8)
         self.file.write(struct.pack("I", (offset - pageSize - 8)))
 
+    def updateDateAccessed(self, offset):
+        self.file.seek(offset)
+        self.file.write(struct.pack("I", (int)(time.time())))
+
+
     # Escribe meta datos de inicio a fin, hasta chocar con los datos de las paginas
     def writeMetaData(self, metaData):
         self.file.seek(self.getMetaDataOffset())
@@ -99,6 +104,7 @@ class FileSystem:
             index += 4 # Movimiento para agarrar solo pageSize y la direccion de la pagina actual 
             metaData = self.getContent(index, 8)
             data = self.getContent(metaData[1]+8,metaData[0])
+            self.updateDateAccessed(metaData[1]+4)
             print(data)
             return data
         else: 
@@ -128,15 +134,16 @@ class FileSystem:
 
 
     """def run(self):
-        self.diskSize = 4000
-        self.fileName = "newfile"
-        self.createBinaryFile()"""
+        # Un thread para guardar y 2 para lecturas
+        self.savePage(pageId, pageSize, data)
+        self.getPageData( pageID)"""
+
 print("Inserte el nombre del archivo")
 name = input()
 print("Inserte el tamano del archivo")
 size = int(input())
-name = "newfile"
-size = 240000
+#name = "newfile"
+#size = 240000
 fs = FileSystem(name,size)
 fs.savePage(1, 20, (4,5,6,7,8))
 fs.savePage(2, 20, (4,5,6,7,8))
@@ -145,6 +152,10 @@ fs.savePage(4, 28, (4,5,6,7,8,9,10))
 fs.savePage(5, 20, (666,777,888,999,420))
 fs.savePage(6, 20, (4,5,6,7,8))
 fs.savePage(7, 24, (4,5,6,7,8,9))
+x = time.time()
+while time.time() - x < 5:  # Para tener diferente fecha de acceso y creacion
+    a = 8
+fs.getPageData(5)
 #fs.getPageData(5)
 #fs.getPageData(7)
 #fs.getPageData(9)
