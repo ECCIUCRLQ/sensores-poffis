@@ -33,7 +33,7 @@ class MemoryManager:
 		self.mainMemory = matrix.zeros( shape = (4, PAG_SZE+1), dtype = int )
 		#@self.secondaryMemory = [] 
 		self.nextId = 0
-		self.olderPageIndex = 0
+		self.olderPageBrought = 0
 		self.messenger = LocalMemoryProtocol() 
 	
 	def updateFrameTable(self, pageNumber, location, rsrv_stus):
@@ -53,7 +53,7 @@ class MemoryManager:
 				
 			
 			else:
-				#@pageToReplace = self.olderPageIndex % MAIN_MEMORY_PAGE_COUNT #Se busca la poscion de la página más vieja
+				#@pageToReplace = self.olderPageBrought % MAIN_MEMORY_PAGE_COUNT #Se busca la poscion de la página más vieja
 				pageToReplace = self.search_full_pag()
 				self.sendToSecondaryMemory(pageToReplace) #Se envía a memoria secundaria
 				self.updateFrameTable(self.mainMemory[pageIndex][0], SECONDARY_MEMORY, FULL)
@@ -61,10 +61,10 @@ class MemoryManager:
 				self.updateFrameTable(self.nextId, MAIN_MEMORY, NOT_FULL)
 				#@self.mainMemory[pageToReplace] = newPage #Se pone el buffer en la memoria principal 
 
-			#@self.updateFrameTable(self.nextId, self.olderPageIndex % MAIN_MEMORY_PAGE_COUNT , MAIN_MEMORY)
+			#@self.updateFrameTable(self.nextId, self.olderPageBrought % MAIN_MEMORY_PAGE_COUNT , MAIN_MEMORY)
 			
 			self.nextId += 1
-			#@self.olderPageIndex += 1
+			#@self.olderPageBrought += 1
 			return self.nextId-1
 		else: 
 			return -1
@@ -124,7 +124,9 @@ class MemoryManager:
 			#@page = int( os.path.basename(pageName).rsplit('.',1)[0] )
 			#@self.mainMemory[ self.frameTable[pageNumber][0] ].seek(0)
 		else:
-			
+			self.messenger.requestedPages.put(pageNumber)
+			position = self.olderPageBrought % 2 + 2
+			self.mainMemory[position] = 
 			pageName = self.secondaryMemory[ self.frameTable[pageNumber][0] ].name
 			page = int( os.path.basename(pageName).rsplit('.',1)[0] )
 			self.secondaryMemory[ self.frameTable[pageNumber][0] ].seek(0)
