@@ -9,8 +9,9 @@ MAIN_MEM_PAG_WRT = 2
 MAIN_MEM_PAG_RED = 2
 #Arbitrary number, represent the max page capacity the system can handle 
 SYS_PAG_CAP=100
-#3600s * 24h * 2ints-of-data
-PAG_SZE=172800
+#3600s * 24h * 2ints-of-data + 1 for identifier
+#PAG_SZE=172801
+PAG_SZE=11
 #Location flag | Capacity Flag
 #Identifier is given by the position in the array 
 INFO_PER_PAGE = 2
@@ -26,10 +27,11 @@ class MemoryManager:
 	
 	def __init__(self):
 		self.frameTable = matrix.zeros( shape = (SYS_PAG_CAP, INFO_PER_PAGE), dtype = int )  		 
-		self.mainMemory = matrix.zeros( shape = (4, PAG_SZE+1), dtype = int )
+		self.mainMemory = matrix.zeros( shape = (4, PAG_SZE), dtype = int )
 		self.nextId = 0
 		self.olderPageBrought = 0
-		self.messenger = LocalMemoryProtocol() 
+		self.messenger = LocalMemoryProtocol()
+		self.messenger.run()
 	
 	def updateFrameTable(self, pageNumber, location, cap_stat):
 		self.frameTable[pageNumber][0] = location
@@ -44,7 +46,7 @@ class MemoryManager:
 			else:
 				pageToReplace = self.search_full_pag()
 				self.sendToSecondaryMemory(pageToReplace) #Se envía a memoria secundaria
-				self.updateFrameTable(self.mainMemory[pageIndex][0], SECONDARY_MEMORY, FULL)
+				self.updateFrameTable(self.mainMemory[pageToReplace][0], SECONDARY_MEMORY, FULL)
 				self.mainMemory[pageToReplace][0] = self.nextId
 				self.updateFrameTable(self.nextId, MAIN_MEMORY, NOT_FULL)
 			
@@ -64,21 +66,22 @@ class MemoryManager:
 
 
 	def sendToSecondaryMemory(self, pageToReplace):
-		self.messenger.pagesToSave.put(self.mainMemory[pageToReplace])
-		self.messenger.okeyAlreadyRead.acquire()
-		self.updateFrameTable(pageToReplace, len(self.secondaryMemory) - 1, SECONDARY_MEMORY)
+		#!self.messenger.pagesToSave.put(self.mainMemory[pageToReplace])
+		#!self.messenger.okeyAlreadyRead.acquire()
+		self.updateFrameTable(pageToReplace, SECONDARY_MEMORY, FULL)
 
 	#Since straight targeting is no loger used this method is needed to find the position of a page in MM 
 	def get_MM_index(self, pageNumber):
 		for memIndx in range(MAIN_MEM_PAG_WRT):
-			if self.mainMemory[mem_indx][0] == pageNumber:
+			if self.mainMemory[memIndx][0] == pageNumber:
 				return memIndx
 
 	#Since no page can be sent to secondary memory in a state different from full, page to be written must be always in main memory	
 	def writePage(self, pageNumber, date, data, offset, cap_stat):
+		offset += 1
 		if self.frameTable[pageNumber][0] == MAIN_MEMORY:
-			postion = self.get_MM_index(pageNumber)
-			self.mainMemory[position][offset]=date
+			position = self.get_MM_index(pageNumber)
+			self.mainMemory[position][offset] = date
 			self.mainMemory[position][offset+1]=data
 			self.updateFrameTable(pageNumber, MAIN_MEMORY, cap_stat)
 		
@@ -87,8 +90,8 @@ class MemoryManager:
 
 	def requestPage(self, pageNumber):
 		if self.frameTable[pageNumber][0] == MAIN_MEMORY:
-			postion = self.get_MM_index(pageNumber)
-			dataBuffer = self.main_memory[position]
+			position = self.get_MM_index(pageNumber)
+			dataBuffer = self.mainMemory[position]
 		else:
 			self.messenger.requestedPages.put(pageNumber)
 			while True:

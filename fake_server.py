@@ -6,7 +6,6 @@ import threading
 import time
 import csv
 from interface import Interface
-from collectors import Collectors
 from plotter import Plotter
 from local_memory import MemoryManager
 
@@ -21,17 +20,17 @@ def main():
 	memoryManager = MemoryManager()
 	plotter = Plotter()
 	interface = Interface()
-	interface.initializer(interface_queue, collectors_info, memoryManager, plotter)
+	interface.initializer(interface_queue, memoryManager, plotter)
 
 	
 	while True:
 		#Package composed by date and data
 		#First sensor
-		package = [int(time.time()),random.randint(100,500)]
-		interface_queue.put(package, 0)
+		package = [int(time.time()),random.randint(100,500),0]
+		interface_queue.put(package)
 		#Second sensor 
-		package = [int(time.time()),random.randint(100,500)]
-		interface_queue.put(package, 1)
+		package = [int(time.time()),random.randint(100,500),1]
+		interface_queue.put(package)
 		
 		time.sleep(GENERATION_TIME)
 

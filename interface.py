@@ -3,13 +3,13 @@ import sys
 import queue
 import threading
 import csv
-from memory import MemoryManager
+from local_memory import MemoryManager
 from plotter import Plotter
 
 PAGES_IN_SYSTEM = 4
 #3600s * 24h * 2ints-of-data
-PAGE_SIZE = 172800
-
+#PAGE_SIZE = 172800
+PAGE_SIZE = 10
 #Flag values
 NOT_FULL = 0
 FULL = 1
@@ -53,37 +53,38 @@ class Interface:
 					plotter.dataBuffer[x] = [] 
 					for v in id_table[sensorRequestedPlot][2]:	
 						self.lock.acquire()
-						plotter.dataBuffer[x].extend( memoryManager.sendPageToInterface(v) )
+						plotter.dataBuffer[x].extend( memoryManager.requestPage(v) )
 						self.lock.release()	
 							
 			if counter == numSensorsWanted:
-				plotter.plot(data,numSensorsWanted)
+				plotter.plot(numSensorsWanted)
 				counter = 0
 
 	def dataEntry(self, interface_queue, id_table, memoryManager):
 			while True:
 				if not interface_queue.empty():
 					dataCard = interface_queue.get()
-					spaceUsed = id_table[dataCard[1]][1]
-					sensorPages = id_table[dataCard[1]][2]
+					spaceUsed = id_table[dataCard[2]][1]
+					sensorPages = id_table[dataCard[2]][2]
 					if sensorPages:
 						currentPage = sensorPages[len(sensorPages)-1]
 					numberReceived = -1
 					if PAGE_SIZE > spaceUsed and spaceUsed > 0:
 						self.lock.acquire()
 						if (spaceUsed + 2) == PAGE_SIZE:
-							memoryManager.writePage(currentPage,  dataCard[0][0], dataCard[0][1], spaceUsed, FULL)
+							memoryManager.writePage(currentPage,  dataCard[0], dataCard[1], spaceUsed, FULL)
 						else:
-							memoryManager.writePage(currentPage,  dataCard[0][0], dataCard[0][1], spaceUsed, NOT_FULL)
-						id_table[dataCard[1]][1] += 2
+							memoryManager.writePage(currentPage,  dataCard[0], dataCard[1], spaceUsed, NOT_FULL)
+						id_table[dataCard[2]][1] += 2
 						self.lock.release()
 					else:
 						self.lock.acquire()
 						numberReceived = memoryManager.createNewPage()
 						if numberReceived != -1:
 							sensorPages.append(numberReceived)
-							memoryManager.writePage(numberReceived, dataCard[0][0], dataCard[0][1], spaceUsed, NOT_FULL)
-							id_table[dataCard[1]][1] += 2
+							spaceUsed = 0
+							memoryManager.writePage(numberReceived, dataCard[0], dataCard[1], spaceUsed, NOT_FULL)
+							id_table[dataCard[2]][1] = 2
 							self.lock.release()
 						else:
 							self.lock.release()
