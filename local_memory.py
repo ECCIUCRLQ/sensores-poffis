@@ -10,8 +10,8 @@ MAIN_MEM_PAG_RED = 2
 #Arbitrary number, represent the max page capacity the system can handle 
 SYS_PAG_CAP=100
 #3600s * 24h * 2ints-of-data + 1 for identifier
-#PAG_SZE=172801
-PAG_SZE=11
+#pageSizePlusPageID=172801
+pageSizePlusPageID=1001
 #Location flag | Capacity Flag
 #Identifier is given by the position in the array 
 INFO_PER_PAGE = 2
@@ -27,7 +27,7 @@ class MemoryManager:
 	
 	def __init__(self):
 		self.frameTable = matrix.zeros( shape = (SYS_PAG_CAP, INFO_PER_PAGE), dtype = int )  		 
-		self.mainMemory = matrix.zeros( shape = (4, PAG_SZE), dtype = int )
+		self.mainMemory = matrix.zeros( shape = (4, pageSizePlusPageID), dtype = int )
 		self.nextId = 0
 		self.olderPageBrought = 0
 		self.messenger = LocalMemoryProtocol()
@@ -66,8 +66,8 @@ class MemoryManager:
 
 
 	def sendToSecondaryMemory(self, pageToReplace):
-		#!self.messenger.pagesToSave.put(self.mainMemory[pageToReplace])
-		#!self.messenger.okeyAlreadyRead.acquire()
+		self.messenger.pagesToSave.put(self.mainMemory[pageToReplace])
+		self.messenger.okeyAlreadyRead.acquire()
 		self.updateFrameTable(pageToReplace, SECONDARY_MEMORY, FULL)
 
 	#Since straight targeting is no loger used this method is needed to find the position of a page in MM 
@@ -94,16 +94,14 @@ class MemoryManager:
 			dataBuffer = self.mainMemory[position]
 		else:
 			self.messenger.requestedPages.put(pageNumber)
-			while True:
-				#Watch out for race conditions  
-				if not self.messenger.requestedPages.empty():
-					break
+			self.messenger.sendInfoToLocalMemory.acquire()
 			position = self.olderPageBrought % 2 + 2
 			self.updateFrameTable(self.mainMemory[position][0], SECONDARY_MEMORY, FULL)
-			self.mainMemory[position] = self.messenger.requestedPages.get()
+			self.mainMemory[position] = self.messenger.receivePageFromInterface.get()
 			self.updateFrameTable(self.mainMemory[position][0], MAIN_MEMORY, FULL)
 			dataBuffer = self.mainMemory[position]
 			self.olderPageBrought += 1
+			self.messenger.infoSetInLocalMemory.release()
 		return dataBuffer
 
 """kappa = MemoryManager()

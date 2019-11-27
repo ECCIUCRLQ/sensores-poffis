@@ -9,7 +9,7 @@ from plotter import Plotter
 PAGES_IN_SYSTEM = 4
 #3600s * 24h * 2ints-of-data
 #PAGE_SIZE = 172800
-PAGE_SIZE = 10
+PAGE_SIZE = 1000
 #Flag values
 NOT_FULL = 0
 FULL = 1

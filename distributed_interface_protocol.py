@@ -2,6 +2,7 @@ import struct
 import queue
 import threading
 import time
+import socket
 
 ## Operation codes.
 SAVE_PAGE = 0
@@ -9,6 +10,7 @@ REQUEST_PAGE = 1
 OK = 2
 SEND = 3
 ERROR = 4
+IAMHERE = 5
 
 ## Queue size.
 QUEUE_SIZE = 10000
@@ -24,7 +26,7 @@ DATA_COUNT = PAGE_SIZE // DATA_SIZE
 
 
 class DistributedInterfaceProtocol:
-	packets = None
+	receiveFromNodes = None
 	## Request pages by local memory.
 	requestedPages = None 
 	## Pages to save for local memory.
@@ -40,7 +42,7 @@ class DistributedInterfaceProtocol:
 	
 	
 	def __init__(self):
-		self.packets = queue.Queue(QUEUE_SIZE) 
+		self.receiveFromNodes = queue.Queue(QUEUE_SIZE) 
 		self.requestedPages = queue.Queue(QUEUE_SIZE) 
 		self.pagesToSave = queue.Queue(QUEUE_SIZE) 
 		self.ok = queue.Queue(QUEUE_SIZE) 
@@ -56,6 +58,7 @@ class DistributedInterfaceProtocol:
 		classifier = threading.Thread(target = self.classifyPackets) 
 		requester = threading.Thread(target = self.requestPage)
 		saver = threading.Thread(target = self.savePage)
+		sender = threading.Thread(target=self.sendPage)
 		
 	def savePage(self):	
 		## Proteger con mutex.
@@ -80,7 +83,7 @@ class DistributedInterfaceProtocol:
 							break
 					else:
 						okMessage = self.ok.get()
-						self.ok.put(okMesage)
+						self.ok.put(okMessage)
 						self.okAlreadyRead.release()
 						if(okMessage[0] == ERROR):
 							print('Error: Could not save page.')
@@ -97,17 +100,29 @@ class DistributedInterfaceProtocol:
 												
 	def requestPage(self):
 		while True:
-				if( not self.requestedPages.empty() ):
-					pageToRequest = self.requestedPages.get()
-					self.currentOperation = REQUEST_PAGE
-					self.idTellMeTheIp.release()
-					self.iAlreadyKnowIp.acquire()
-					### Enviar el paquete solicitud	
+			##Proteger con mutex
+			if( not self.requestedPages.empty() ):
+				packet = []
+				pageToRequest = self.requestedPages.get()
+				self.currentOperation = REQUEST_PAGE
+				self.idTellMeTheIp.release()
+				self.iAlreadyKnowIp.acquire()
+				packetStruct = struct.Struct('1s 1s')
+				packet.append(bytearray(OK))
+				packet.append(bytearray(pageToRequest))
+				packetStruct.pack(*(tuple(packet)))
+				### Enviar el paquete solicitud	
 		
-	def sendPage(self): 
-		self.currentOperation = SEND
+	def sendPage(self):
+		while True: 
+			#Proteger con Mutex
+			if(not self.receiveFromNodes.empty()):
+				self.currentOperation = SEND
+				packageReceived = self.receiveFromNodes.get()
+				### Enviar el paquete a memoria local tal y como viene
+				
+		
 		
 		
 				
 	def classifyPackets(self): ## Desempaquetar solo para verificar códigos de operación, en las colas deben guardarse como vienen.
-	
