@@ -24,7 +24,7 @@ DATA_SIZE = 4
 ## Number of integers peer page.
 DATA_COUNT = PAGE_SIZE // DATA_SIZE
 
-class DistributedIMemoryProtocol:
+class DistributedMemoryProtocol:
     receivePageFromInterface = None
     sendToInterfaceRequest = None
     okFromID = None
