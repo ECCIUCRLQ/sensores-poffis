@@ -39,6 +39,8 @@ class DistributedInterfaceProtocol:
 	iAlreadyKnowIp = None 
 	okeyAlreadyRead = None
 	currentOperation = None
+	pageSize =  None
+	pageId = None
 	
 	
 	def __init__(self):
@@ -53,6 +55,8 @@ class DistributedInterfaceProtocol:
 		self.iAlreadyKnowIp = threading.Semaphore(0)
 		self.okeyAlreadyRead = threading.Semaphore(0)
 		self.currentOperation = -1
+		self.pageId = -1
+		self.pageSize = PAGE_SIZE
 		
 	def run(self):
 		classifier = threading.Thread(target = self.classifyPackets) 
@@ -65,37 +69,42 @@ class DistributedInterfaceProtocol:
 		while True:
 			if( not self.pagesToSave.empty() ):
 				pageRequest =  self.pagesToSave.get()
-				## Desempaqueta
-				### Coloca en la variable de tamaño solicitado según lo que desempaqueto.
+				## Queremos guardar una página, ocupamos que ID nos diga la IP del nodo donde se guarda.
 				self.currentOperation = SAVE_PAGE
+				### Obtener número de página.
+				self.pageId = pageRequest[1]
+				### Obtener tamano de página.
+				self.pageSize = pageRequest[2] 
 				### Esperar que ID activa me diga la IP del nodo en el que hay que guardar.
 				self.idTellMeTheIp.release()
 				### ID activa avisa que ya nos dio la IP.
 				self.iAlreadyKnowIp.acquire()
-				### Enviar el paquete (se toma 'pageRequest')
-				timeout = time.time() + 10
-				okFromDM = False
-				packet = []
-				while True:
-					if(self.ok.empty()):
-						if(time.time() > timeout):
-							self.pagesToSave.put(pageRequest)
-							break
-					else:
-						okMessage = self.ok.get()
-						self.ok.put(okMessage)
-						self.okAlreadyRead.release()
-						if(okMessage[0] == ERROR):
-							print('Error: Could not save page.')
+				## Si la ID distribuida retorna -1 en la IP es porque no había espacio para guardar la página (no debería suceder, pero por si acaso).
+				if( self.ipCurrentNode > -1 )
+					### Enviar el paquete (se toma 'pageRequest')
+					timeout = time.time() + 10
+					okFromDM = False
+					packet = []
+					while True:
+						if(self.ok.empty()):
+							if(time.time() > timeout):
+								self.pagesToSave.put(pageRequest)
+								break
 						else:
-							okFromDM = True
-						break
-				if(okayFromDM):
-					packetStruct = struct.Struct('1s 1s')
-					packet.append(bytearray(OK))
-					packet.append(bytearray(okMessage[1]))
-					packetStruct.pack( *( tuple(packet) ) )
-					####Envíar ok a LM
+							okMessage = self.ok.get()
+							self.ok.put(okMessage)
+							self.okAlreadyRead.release()
+							if(okMessage[0] == ERROR):
+								print('Error: Could not save page.')
+							else:
+								okFromDM = True
+							break
+					if(okayFromDM):
+						packetStruct = struct.Struct('1s 1s')
+						packet.append(bytearray(OK))
+						packet.append(bytearray(okMessage[1]))
+						packetStruct.pack( *( tuple(packet) ) )
+						####Envíar ok a LM
 				
 												
 	def requestPage(self):
@@ -107,11 +116,13 @@ class DistributedInterfaceProtocol:
 				self.currentOperation = REQUEST_PAGE
 				self.idTellMeTheIp.release()
 				self.iAlreadyKnowIp.acquire()
-				packetStruct = struct.Struct('1s 1s')
-				packet.append(bytearray(OK))
-				packet.append(bytearray(pageToRequest))
-				packetStruct.pack(*(tuple(packet)))
-				### Enviar el paquete solicitud	
+				## Si la ID distribuida retorna -1 en la IP es porque la página no está en ningún nodo (está en memoria local y fue error nuestro solicitarla).
+				if( self.ipCurrentNode > - 1 )
+					packetStruct = struct.Struct('1s 1s')
+					packet.append(bytearray(OK))
+					packet.append(bytearray(pageToRequest))
+					packetStruct.pack(*(tuple(packet)))
+					### Enviar el paquete solicitud	
 		
 	def sendPage(self):
 		while True: 
