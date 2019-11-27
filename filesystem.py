@@ -183,7 +183,7 @@ class FileSystem:
         thread = threading.Thread(target=self.getPageData)
         thread.start()
         
-if len(sys.argv) >= 3:
+if len(sys.argv) > 3:
     name = sys.argv[1]
     size = int(sys.argv[2])
     fs = FileSystem(name,size)
