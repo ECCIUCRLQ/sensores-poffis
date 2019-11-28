@@ -64,7 +64,7 @@ class DistributedMemoryProtocol:
         savePageRequest.start()
         classifier = threading.Thread(target= self.classifyPackets)
         classifier.start()
-        self.sendRegisterSignal(10000)
+        self.sendRegisterSignal(self.nodeCurrentMemory)
         #while True:
             #kappa = 2
 
