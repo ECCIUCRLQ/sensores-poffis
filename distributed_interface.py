@@ -1,4 +1,5 @@
-import distributed_interface_protocol from DistributedInterfaceProtocol
+
+from distributed_interface_protocol import DistributedInterfaceProtocol
 import struct
 import threading
 
@@ -27,29 +28,29 @@ AVAILABLE_SPACE = 2
 SAVE_PAGE = 0
 REQUEST_PAGE = 1
 
-class DistributedInterface
-{
+class DistributedInterface:
 	def __init__(self):
-		self.pageTable = [[None]*MAX_PAGE_COUNT]*INFO_PER_PAGE
-		self.nodeTable = [[None]*MAX_NODE_COUNT]*INFO_PER_NODE
-		
+		self.pageTable = [None]*MAX_PAGE_COUNT	
+		self.nodeTable = [None]*MAX_NODE_COUNT
 		## La primera columna indica el número de página (coincide con número de fila) y la segunda columna el id del nodo 
 		## donde se encuentra guardada, con -1 se indica que la página aún no ha sido almacenada en ningún nodo (está en memoria local).
-		for( row in range(0, MAX_PAGE_COUNT) ):
-			for(col in range(0, INFO_PER_PAGE) ):
-				if( col == PAGE_ID )
+		for row in range(0, MAX_PAGE_COUNT):
+			self.pageTable[row] = [None]*INFO_PER_PAGE
+			for col in range(0, INFO_PER_PAGE):
+				if( col == PAGE_ID ):
 					self.pageTable[row][col] = row
 				else:
 					self.pageTable[row][col] = -1 
 		
 		## La primera columna indica el id del nodo (coincide con número de fila), la segunda indica su dirección IP y la tercera el espacio
 		## disponible. Columnas 2 y 3 se inicializan en -1 para indicar que ese nodo aún no se ha registrado.
-		for( row in range(0, MAX_NODE_COUNT) ):
-			for(col in range(0, INFO_PER_NODE) ):
-				if( col == NODE_ID_T )
-					self.pageTable[row][col] = row
+		for row in range(0, MAX_NODE_COUNT) :
+			self.nodeTable[row] = [None]* INFO_PER_NODE
+			for col in range(0, INFO_PER_NODE) :
+				if( col == NODE_ID_T ):
+					self.nodeTable[row][col] = row
 				else:
-					self.pageTable[row][col] = -1 
+					self.nodeTable[row][col] = -1 
 	
 		self.messenger =  DistributedInterfaceProtocol()
 		self.messenger.run() 
@@ -76,16 +77,28 @@ class DistributedInterface
 					self.messenger.ipCurrentNode = assignedNode 					
 			## Si se requiere solicitar una página se localiza el nodo donde se encuentraß y se retorna su IP.
 			elif( self.messenger.currentOperation == REQUEST_PAGE ):
-				nodeId = self.messenger. self.pageTable[self.messenger.pageId][NODE_ID]
+				nodeId =  self.pageTable[self.messenger.pageId][NODE_ID]
 				if( nodeId > -1 ):
 					self.messenger.ipCurrentNode = self.nodeTable[nodeId][NODE_IP]
 				else: ## Con -1 se le indica al protocolo que la página solicitada no está en ningún nodo.
 					self.messenger.ipCurrentNode = nodeId
 				
 			self.messenger.iAlreadyKnowIp.release()
+
+			if(self.messenger.currentOperation == SAVE_PAGE):
+				self.messenger.okeyAlreadyRead.acquire()
+				self.updateNodeTable(assignedNode,self.nodeTable[assignedNode][1],self.messenger.sizeInNode)
 	
 	def registerNewNode(self):
-		##while True:
+		nodes = 0
+		while True:
+			if(not self.messenger.newNodes.empty()):
+				
+				nodeInfo = self.messenger.newNodes.get()
+				size = nodeInfo[0]
+				Ip = nodeInfo[1]
+				self.updateNodeTable(nodes,Ip,size)
+				nodes = nodes + 1
 		
 		
 	def updatePageTable(self, pageId, nodeId):
@@ -98,11 +111,13 @@ class DistributedInterface
 	# First fit.
 	def selectNode(self, pageSize, pageId):
 		assignedNode = -1
-		for(row in self.nodeTable):
+		for row in self.nodeTable:
 			if(row[AVAILABLE_SPACE] >= pageSize):
 				assignedNode = row[NODE_ID_T]  
-				updatePageTable(pageId, row[NODE_ID_T])
+				self.updatePageTable(pageId, row[NODE_ID_T])
 				break
 				
 		return assignedNode 
-}
+
+kappa = DistributedInterface()
+
