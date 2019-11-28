@@ -8,7 +8,7 @@ import random
 import threading
 from distributed_memory_protocol import DistributedMemoryProtocol
 from datetime import datetime
-#from tabulate import tabulate
+from tabulate import tabulate
 
 class FileSystem:
     
@@ -126,7 +126,8 @@ class FileSystem:
                 self.writePageData(pageSize, data)
                 self.protocol.nodeCurrentMemory = self.getSpaceAvailable()
             else:
-                print("Escritura fallida. No hay suficiente espacio disponible.\nEspacio disponible:", self.getSpaceAvailable(),"bytes.")
+                print("Write failed. There is not enough available. \n Enough available:", self.getSpaceAvailable())
+                #print("Escritura fallida. No hay suficiente espacio disponible.\nEspacio disponible:", self.getSpaceAvailable(),"bytes.")
             self.protocol.infoSetInNode.release() #Nuevo
 
     def getPageData(self):
@@ -149,8 +150,9 @@ class FileSystem:
                 self.updateDateAccessed(metaData[1]+4)
                 self.protocol.infoAlreadyAvailable.release()   
                 print(data)
-            else: 
-                print("La pagina con id", pageID,"no se encuentra en este nodo.")
+            else:
+                print("Page", pageID, "was not found in this node.") 
+                #print("La pagina con id", pageID,"no se encuentra en este nodo.")
     
     def getPageDates(self, index):
         self.file.seek(index)
@@ -158,7 +160,8 @@ class FileSystem:
     
     def listFiles(self):
         while True:
-            print("Si quiere ver informacion sobre las paginas actuales ubicadas en este nodo, digite ls")
+            #print("Si quiere ver informacion sobre las paginas actuales ubicadas en este nodo, digite ls")
+            print("Type ls if you want information about the current pages.")
             request = input()
             if request == "ls":
                 information = [] # ID, dateC, dateAcc, pageSize, address
