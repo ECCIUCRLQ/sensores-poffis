@@ -4,6 +4,7 @@ import threading
 import time
 from time import sleep  
 import socket
+import sys 
 
 ## Operation codes.
 SAVE_PAGE = 0
@@ -24,6 +25,7 @@ DATA_SIZE = 4
 
 ## Number of integers peer page.
 DATA_COUNT = PAGE_SIZE // DATA_SIZE
+
 
 class DistributedMemoryProtocol:
     receivePageFromInterface = None
@@ -52,62 +54,70 @@ class DistributedMemoryProtocol:
         self.infoSetInNode = threading.Semaphore(0)
         self.socket = None
         self.waitSendId = False
-       
 
 
 
     def run(self):
-        
         sendRequest = threading.Thread(target= self.sendPage)
         sendRequest.start()
         savePageRequest = threading.Thread(target= self.receivePage) 
         savePageRequest.start()
         classifier = threading.Thread(target= self.classifyPackets)
         classifier.start()
-        self.sendRegisterSignal(10000)
         #while True:
             #kappa = 2
 
 
+    #pageInfo se libera
+
     def sendPage(self):
         while True:
             if (not self.sendToInterfaceRequest.empty()): #Espera unicamente el # de página
+                print("Entre")
                 packet = []
                 pageToBeSended = self.sendToInterfaceRequest.get()
-                print(pageToBeSended)
-                self.pageInfo = []
-                self.requestInfoToNode.release()
+                self.pageInfo = [pageToBeSended]
+                self.requestInfoToNode.release()                 
                 self.infoAlreadyAvailable.acquire()
                 infoSize = len(self.pageInfo)
                 packetFormat = '1s 1s'
+                print("Page info:" , self.pageInfo)
                 for x in range (2,infoSize):
                     packetFormat = packetFormat + ' I'
-                packetStruct = struct.Struct(packetFormat)
-                packet.append(SEND)
-                packet.append(pageToBeSended)
+                packetStruct = struct.Struct(packetFormat) 
+                packet.append(bytearray([SEND]))
+                packet.append(bytearray([pageToBeSended]))
+                print("Paquete: ", packet)
                 for x in range (2,infoSize):
                     packet.append(self.pageInfo[x])
-                packedData = packetStruct.pack( *( tuple(packet) ) )
-                self.waitSendId = False
+                print(packet)
+                packedData = packetStruct.pack(*( tuple(packet) ))
+                #Enviar paquete a ID
                 self.socket.send(packedData)
+                self.socket.close()
+                self.waitSendId = False
                 
     def receivePage(self):
         while True:
             if(not self.receivePageFromInterface.empty()):
+                print("Recibir")
                 self.pageInfo = [] #Coloca en 0 el número de página y el resto la info
                 pageReceived = self.receivePageFromInterface.get()
-                #print(pageReceived)
+                print(pageReceived)
                 for x in range (0,len(pageReceived)):
-                    self.pageInfo.append(pageReceived[x])
-                self.sendInfoToNode.release()
-                self.infoSetInNode.acquire() #A este punto ya está actualizado el nodo y en self.nodeCurrentMemory se colocó el espacio que le queda al nodo
+                    self.pageInfo.append(pageReceived[x])                
+                self.sendInfoToNode.release()  
+                self.infoSetInNode.acquire()
                 packet = []
                 packetStruct = struct.Struct('1s 1s I')
-                packet.append(bytearray(OK))
-                packet.append(bytearray(pageReceived[0]))
+                packet.append(bytearray([OK]))
+                packet.append(bytearray([pageReceived[0]]))
                 packet.append(self.nodeCurrentMemory)
+                print("Paquete: ", packet)
+                # Enviar mensaje de ok
                 packetData = packetStruct.pack( * ( tuple(packet) ) )
                 self.socket.send(packetData)
+                self.socket.close()
                 self.waitSendId = False
                 
 
@@ -137,16 +147,16 @@ class DistributedMemoryProtocol:
                 break
                     
     def classifyPackets(self):
-        packetStruct = struct.Struct('1s')
         while True:
             if(not self.waitSendId):
-                IPID= '192.168.1.30' #Cambiar
+                IPID= '127.0.0.1'#'192.168.1.30' #Cambiar
                 port = 6000
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
                 s.bind((IPID,port))
                 s.listen(1)
                 self.socket,addr = s.accept()
+                packetStruct = struct.Struct('1s')
                 try:
                     data = self.socket.recv(700000)
                 except socket.error:
@@ -161,7 +171,7 @@ class DistributedMemoryProtocol:
                         packetStruct = struct.Struct(packetFormat)
                         unpackedData = list(packetStruct.unpack(data[:8]))
                         size = unpackedData[2]
-                        for x in range(0,size):
+                        for x in range(0,size//4):
                             packetFormat = packetFormat + ' I'
                         packetStruct = struct.Struct(packetFormat)
                         unpackedData = list(packetStruct.unpack(data))
@@ -172,7 +182,6 @@ class DistributedMemoryProtocol:
                         for x in range (3,len(unpackedData)):
                             dataReceived.append(unpackedData[x])
                         self.receivePageFromInterface.put(dataReceived)
-                        #print(unpackedData)
                     elif(operationCode == REQUEST_PAGE):
                         packetStruct = struct.Struct('1s 1s')
                         unpackedData = list(packetStruct.unpack(data[:2]))
@@ -186,8 +195,8 @@ class DistributedMemoryProtocol:
                 
 
 
-kappa = DistributedIMemoryProtocol()
-kappa.run()
+#kappa = DistributedIMemoryProtocol()
+#kappa.run()
 
 
 
