@@ -24,7 +24,7 @@ DATA_SIZE = 4
 
 ## Number of integers peer page.
 #DATA_COUNT = PAGE_SIZE // DATA_SIZE
-DATA_COUNT = 1000
+DATA_COUNT = 10
 
 class LocalMemoryProtocol:
 	#packets = None
@@ -53,13 +53,12 @@ class LocalMemoryProtocol:
 		self.infoSetInLocalMemory = threading.Semaphore(0)
 		self.pageInfo = []
 		self.socket = None
-		waitingAnswerFromID = False
+		self.waitingAnswerFromID = False
 		
 		
 		
 	def run(self):
 		
-		clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		classifier = threading.Thread(target = self.classifyPackets) 
 		requester = threading.Thread(target = self.requestPage)
 		saver = threading.Thread(target = self.savePage)
@@ -87,7 +86,7 @@ class LocalMemoryProtocol:
 				packetStruct = struct.Struct(packetFormat)
 				packet.append(bytearray([SAVE_PAGE]) )
 				packet.append(bytearray([pageID]))
-				packet.append(DATA_COUNT)
+				packet.append(DATA_COUNT*DATA_SIZE)
 				
 				for x in range(0, DATA_COUNT):
 					packet.append(page[x])  
@@ -95,8 +94,8 @@ class LocalMemoryProtocol:
 				#print(packetStruct.pack( * ( tuple(packet) ) ) )
 				#Crear Socket
 				self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  
-				IPIDLocal = '192.168.1.31' #Cambiar
-				port = 6000
+				IPIDLocal = '192.168.1.30' #Cambiar
+				port = 6021
 				connected = False
 				while not connected:
 					try:  
@@ -129,11 +128,11 @@ class LocalMemoryProtocol:
 				pageToRequest = self.requestedPages.get()
 				packetStruct = struct.Struct('1s 1s')
 				packet = bytearray([REQUEST_PAGE]), bytearray([pageToRequest]) 
-				packetStruct.pack(packet)
+				packetData = packetStruct.pack(*(packet))
 				#Crear Socket
 				self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  
-				IPIDLocal = '192.168.1.30.' #Cambiar
-				port = 6000
+				IPIDLocal = '192.168.1.30' #Cambiar
+				port = 6021
 				connected = False
 				while not connected:
 					try:  
@@ -144,7 +143,7 @@ class LocalMemoryProtocol:
 						print( "no ID" )  
 						sleep( 2 )
 				### Enviar el paquete solicitud
-				self.socket.send(packet)
+				self.socket.send(packetData)
 				self.waitingAnswerFromID = True
 
 	def receivePage(self):
@@ -163,53 +162,63 @@ class LocalMemoryProtocol:
 				
 	def classifyPackets(self):
 		while True:
-			packetStruct = struct.Struct('1s')
-			while True:
-				if(self.waitingAnswerFromID):
-					data = 0
-					try:
-						data = self.socket.recv(700000)
-					except socket.error:
-						print("Connection lost with ID when waiting a message") 
-					if(data):
-						#print(data)
-						unpackedData = list(packetStruct.unpack(data[:1]))
-						operationCode =  struct.unpack('>H',b'\x00' + unpackedData[0] )[0]
-						if(operationCode == 2 or operationCode == 4):
-							packetStruct = struct.Struct('1s 1s')
-							unpackedData = list(packetStruct.unpack(data[:2]))
-							typeOk = struct.unpack('>H',b'\x00' + unpackedData[0])[0]
-							pageID = struct.unpack('>H',b'\x00' + unpackedData[1])[0]
-							data = {typeOk,pageID}
-							self.ok.put(data)
-						elif(operationCode == 3):
-							packetFormat = '1s 1s I'
-							packetStruct = struct.Struct(packetFormat)
-							unpackedData = list(packetStruct.unpack(data[:8]))
-							size = unpackedData[2]
-							for x in range(0,size):
-								packetFormat = packetFormat + ' I'
-							packetStruct = struct.Struct(packetFormat)
-							unpackedData = list(packetStruct.unpack(data))
-							dataReceived = []
-							pageID = unpackedData[1]
-							pageID = struct.unpack('>H',b'\x00' + pageID )[0]
-							dataReceived.append(pageID)
-							for x in range (3,len(unpackedData)):
-								dataReceived.append(unpackedData[x])
-							self.receivePageFromInterface.put(dataReceived)
-							self.waitingAnswerFromID = False
+			if(self.waitingAnswerFromID):
+				try:
+					data = self.socket.recvfrom(700000)[0]
+				except socket.error:
+					print("Connection lost with ID when waiting a message")
+					data = False
 
-						else:
-							print("INVALID OPERATION CODE RECEIVED:" + str(operationCode))
+				if(data):
+					#print(data)
+					packetStruct = struct.Struct('1s')
+					unpackedData = list(packetStruct.unpack(data[:1]))
+					operationCode =  struct.unpack('>H',b'\x00' + unpackedData[0] )[0]
+					if(operationCode == 2 or operationCode == 4):
+						packetStruct = struct.Struct('1s 1s')
+						unpackedData = list(packetStruct.unpack(data[:2]))
+						typeOk = struct.unpack('>H',b'\x00' + unpackedData[0])[0]
+						pageID = struct.unpack('>H',b'\x00' + unpackedData[1])[0]
+						data = []
+						data.append(typeOk)
+						data.append(pageID)
+						self.ok.put(data)
+					elif(operationCode == 3):
+						packetFormat = '1s 1s'
+						#size = unpackedData[2]
+						for x in range(0,DATA_COUNT):
+							packetFormat = packetFormat + ' I'
+						packetStruct = struct.Struct(packetFormat)
+						unpackedData = list(packetStruct.unpack(data))
+						dataReceived = []
+						pageID = unpackedData[1]
+						pageID = struct.unpack('>H',b'\x00' + pageID )[0]
+						dataReceived.append(pageID)
+						for x in range (2,len(unpackedData)):
+							dataReceived.append(unpackedData[x])
+						self.receivePageFromInterface.put(dataReceived)
+					else:
+						print("INVALID OPERATION CODE RECEIVED:" + str(operationCode))
+					self.waitingAnswerFromID = False
 
+				self.socket.close()
+'''
 kappa = LocalMemoryProtocol()
 kappa.run()
 kappa2 = []
 for x in range (0,DATA_COUNT+1):
 	kappa2.append(x)
 kappa.pagesToSave.put(kappa2)
-						
+while(True):
+	if(not kappa.ok.empty()):
+		kappa2[0] = 1
+		kappa.requestedPages.put(0)
+		break
+while(True):
+	if(not kappa.receivePageFromInterface.empty()):
+		print(kappa.receivePageFromInterface.get())
+		break
+'''						
 	
 	
 		

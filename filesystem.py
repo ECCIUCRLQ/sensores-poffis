@@ -8,7 +8,7 @@ import random
 import threading
 from distributed_memory_protocol import DistributedMemoryProtocol
 from datetime import datetime
-from tabulate import tabulate
+#from tabulate import tabulate
 
 class FileSystem:
     
@@ -22,6 +22,7 @@ class FileSystem:
         self.file.write(struct.pack("I", diskSize - 12))
         self.file.write(struct.pack("I", 12))
         self.file.write(struct.pack("I", diskSize))
+        self.protocol.nodeCurrentMemory = diskSize-12
 
     def getSpaceAvailable(self):
         return self.getContent(0,4)[0]
@@ -141,7 +142,7 @@ class FileSystem:
             if currentPageID == pageID:
                 index += 4 # Movimiento para agarrar solo pageSize y la direccion de la pagina actual 
                 metaData = self.getContent(index, 8)
-                self.protocol.pageInfo.append(self.getSpaceAvailable())
+                #self.protocol.pageInfo.append(self.getSpaceAvailable())
                 data = self.getContent(metaData[1]+8,metaData[0])
                 for x in data:
                     self.protocol.pageInfo.append(x)

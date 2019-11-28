@@ -99,62 +99,64 @@ class DistributedInterfaceProtocol:
 				### ID activa avisa que ya nos dio la IP.
 				self.iAlreadyKnowIp.acquire()
 				## Si la ID distribuida retorna -1 en la IP es porque no había espacio para guardar la página (no debería suceder, pero por si acaso).
-				if( self.ipCurrentNode > -1 ):
-					packetStruct = struct.Struct('1s 1s I')
-					for x in range (0,self.pageSize):
-						packetStruct = packetStruct + ' I'
-					packet = []
-					packet.append( bytearray([pageRequest[0]]))
-					packet.append( bytearray([pageRequest[1]]))
-					packet.append( pageRequest[3])
-					for x in range (0,self.pageSize):
-						packet.append(pageRequest[x+3])
-					pageToSend = packetStruct.pack(*(tuple(packet)))
+				#if( self.ipCurrentNode > -1 ):
+				packetFormat = '1s 1s I'
+				
+				for x in range (0,self.pageSize//4):
+					packetFormat = packetFormat + ' I'
+				packetStruct = struct.Struct(packetFormat)
+				packet = []
+				packet.append( bytearray([pageRequest[0]]))
+				packet.append( bytearray([pageRequest[1]]))
+				packet.append( pageRequest[2])
+				for x in range (0,self.pageSize//4):
+					packet.append(pageRequest[x+3])
+				pageToSend = packetStruct.pack(*(tuple(packet)))
 
-					self.socketMD = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  
-					port = 6000
-					connected = False
-					while not connected:
-						try:  
-							self.socketMD.connect( ( self.ipCurrentNode, port ) )  
-							connected = True  
-							#print( "connection successful" )  
-						except socket.error:
-							print( "no Node" )  #No debería de pasar
-							sleep( 2 )
+				self.socketMD = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  
+				port = 6000
+				connected = False
+				while not connected:
+					try:  
+						self.socketMD.connect( ( self.ipCurrentNode, port ) )  
+						connected = True  
+						#print( "connection successful" )  
+					except socket.error:
+						print( "no Node" )  #No debería de pasar
+						sleep( 2 )
 
-					self.socketMD.send(pageToSend)
-					self.waitingForMD = True
-					timeout = time.time() + 10
-					okFromDM = False
-					packet = []
-					while True:
-						if(self.ok.empty()):
-							if(time.time() > timeout):
-								self.pagesToSave.put(pageRequest)
-								self.waitingToSendToML = False
-								break
-						else:
-							okMessage = self.ok.get()
-							#self.ok.put(okMessage) #REVISAR
-							
-							
-							if(okMessage[0] == ERROR):
-								self.okeyAlreadyRead.release()
-								print('Error: Could not save page.')
-							else:
-								okFromDM = True
+				self.socketMD.send(pageToSend)
+				self.waitingForMD = True
+				timeout = time.time() + 10
+				okFromDM = False
+				packet = []
+				while True:
+					if(self.ok.empty()):
+						if(time.time() > timeout):
+							self.pagesToSave.put(pageRequest)
+							self.waitingToSendToML = False
 							break
-					if(okFromDM):
-						packetStruct = struct.Struct('1s 1s')
-						packet.append(bytearray(OK))
-						packet.append(bytearray(okMessage[1]))
-						self.sizeInNode = okMessage[2]
-						sendInfo = packetStruct.pack( *( tuple(packet) ) )
-						self.socketML.send(sendInfo)
-						self.socketMD.close()
-						self.waitingToSendToML = False
-						self.okeyAlreadyRead.release()
+					else:
+						okMessage = self.ok.get()
+						#self.ok.put(okMessage) #REVISAR
+						
+						
+						if(okMessage[0] == ERROR):
+							self.okeyAlreadyRead.release()
+							print('Error: Could not save page.')
+						else:
+							okFromDM = True
+						break
+				if(okFromDM):
+					packetStruct = struct.Struct('1s 1s')
+					packet.append(bytearray([OK]))
+					packet.append(bytearray([okMessage[0]]))
+					self.sizeInNode = okMessage[1]
+					sendInfo = packetStruct.pack( *( tuple(packet) ) )
+					self.socketML.send(sendInfo)
+					self.socketML.close()
+					self.waitingToSendToML = False
+					self.okeyAlreadyRead.release()
 				
 												
 	def requestPage(self):
@@ -167,24 +169,24 @@ class DistributedInterfaceProtocol:
 				self.idTellMeTheIp.release()
 				self.iAlreadyKnowIp.acquire()
 				## Si la ID distribuida retorna -1 en la IP es porque la página no está en ningún nodo (está en memoria local y fue error nuestro solicitarla).
-				if( self.ipCurrentNode > - 1 ):
-					packetStruct = struct.Struct('1s 1s')
-					packet.append(bytearray(REQUEST_PAGE))
-					packet.append(bytearray(pageToRequest))
-					packetData = packetStruct.pack(*(tuple(packet)))
-					self.socketMD = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  
-					port = 6000
-					connected = False
-					while not connected:
-						try:  
-							self.socketMD.connect( ( self.ipCurrentNode, port ) )  
-							connected = True  
-							#print( "connection successful" )  
-						except socket.error:
-							print( "no Node" )  
-							sleep( 2 )
-					self.socketMD.send(packetData)
-					self.waitingForMD = True
+				#if( self.ipCurrentNode > - 1 ):
+				packetStruct = struct.Struct('1s 1s')
+				packet.append(bytearray([REQUEST_PAGE]))
+				packet.append(bytearray([pageToRequest]))
+				packetData = packetStruct.pack(*(tuple(packet)))
+				self.socketMD = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  
+				port = 6000
+				connected = False
+				while not connected:
+					try:  
+						self.socketMD.connect( ( self.ipCurrentNode, port ) )  
+						connected = True  
+						#print( "connection successful" )  
+					except socket.error:
+						print( "no Node" )  
+						sleep( 2 )
+				self.socketMD.send(packetData)
+				self.waitingForMD = True
 
 					
 		
@@ -208,8 +210,9 @@ class DistributedInterfaceProtocol:
 			while True:
 				if(not self.waitingToSendToML):
 					s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  
-					host = '192.168.1.31' #socket.gethostname()  
-					port = 6000
+					host = '192.168.1.30' #socket.gethostname()  
+					port = 6021
+					s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
 					s.bind( ( host, port ) )  
 					s.listen( 1 )
 					self.socketML,addr = s.accept()
@@ -217,6 +220,7 @@ class DistributedInterfaceProtocol:
 					if(data):
 						self.waitingToSendToML = True
 						#print(data)
+						packetStruct = struct.Struct('1s')
 						unpackedData = list(packetStruct.unpack(data[:1]))
 						operationCode =  struct.unpack('>H',b'\x00' + unpackedData[0] )[0]
 						if(operationCode == REQUEST_PAGE):
@@ -230,7 +234,7 @@ class DistributedInterfaceProtocol:
 							packetFormat = '1s 1s I'
 							packetStruct = struct.Struct(packetFormat)
 							unpackedData = list(packetStruct.unpack(data[:8]))
-							size = unpackedData[2]
+							size = unpackedData[2] //4
 							for x in range(0,size):
 								packetFormat = packetFormat + ' I'
 							packetStruct = struct.Struct(packetFormat)
@@ -240,6 +244,7 @@ class DistributedInterfaceProtocol:
 							pageID = struct.unpack('>H',b'\x00' + pageID )[0]
 							dataReceived.append(operationCode)
 							dataReceived.append(pageID)
+							dataReceived.append(size*4)
 							for x in range (3,len(unpackedData)):
 								dataReceived.append(unpackedData[x])
 							self.pagesToSave.put(dataReceived)
@@ -248,7 +253,7 @@ class DistributedInterfaceProtocol:
 							print("INVALID OPERATION CODE RECEIVED:" + str(operationCode))
 
 	def classifyPacketsFromMD(self): ## Desempaquetar solo para verificar códigos de operación, en las colas deben guardarse como vienen.
-		packetStruct = struct.Struct('1s')
+		
 		while True:
 			if(self.waitingForMD):
 				try:
@@ -257,22 +262,25 @@ class DistributedInterfaceProtocol:
 					print("Connection lost with MD when waiting a message")  
 				if(data):
 					#print(data)
+					packetStruct = struct.Struct('1s')
 					unpackedData = list(packetStruct.unpack(data[:1]))
 					operationCode =  struct.unpack('>H',b'\x00' + unpackedData[0] )[0]
 					if(operationCode == OK):
 						packetStruct = struct.Struct('1s 1s I')
-						unpackedData = list(packetStruct.unpack(data[:2]))
+						unpackedData = list(packetStruct.unpack(data[:8]))
 						operationCode = struct.unpack('>H',b'\x00' + unpackedData[0])[0]
 						pageID = struct.unpack('>H',b'\x00' + unpackedData[1])[0]
 						spaceAvailable = unpackedData[2]
-						data = {pageID,spaceAvailable}
-						self.requestedPages.put(data)
+						data = []
+						data.append(pageID)
+						data.append(spaceAvailable)
+						self.ok.put(data)
 					elif(operationCode == SEND):
 						packetFormat = '1s 1s'
 						#packetStruct = struct.Struct(packetFormat)
 						#unpackedData = list(packetStruct.unpack(data[:8]))
 						#size = unpackedData[2]
-						for x in range(0,self.pageSize):
+						for x in range(0,self.pageSize//4):
 							packetFormat = packetFormat + ' I'
 						packetStruct = struct.Struct(packetFormat)
 						unpackedData = list(packetStruct.unpack(data))

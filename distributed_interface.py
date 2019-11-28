@@ -99,6 +99,7 @@ class DistributedInterface:
 				Ip = nodeInfo[1]
 				self.updateNodeTable(nodes,Ip,size)
 				nodes = nodes + 1
+				print(Ip)
 		
 		
 	def updatePageTable(self, pageId, nodeId):

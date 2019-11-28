@@ -64,6 +64,7 @@ class DistributedMemoryProtocol:
         savePageRequest.start()
         classifier = threading.Thread(target= self.classifyPackets)
         classifier.start()
+        self.sendRegisterSignal(10000)
         #while True:
             #kappa = 2
 
@@ -82,13 +83,13 @@ class DistributedMemoryProtocol:
                 infoSize = len(self.pageInfo)
                 packetFormat = '1s 1s'
                 print("Page info:" , self.pageInfo)
-                for x in range (2,infoSize):
+                for x in range (1,infoSize):
                     packetFormat = packetFormat + ' I'
                 packetStruct = struct.Struct(packetFormat) 
                 packet.append(bytearray([SEND]))
                 packet.append(bytearray([pageToBeSended]))
                 print("Paquete: ", packet)
-                for x in range (2,infoSize):
+                for x in range (1,infoSize):
                     packet.append(self.pageInfo[x])
                 print(packet)
                 packedData = packetStruct.pack(*( tuple(packet) ))
@@ -134,7 +135,7 @@ class DistributedMemoryProtocol:
             # Permitir broadcast
             server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
             server.sendto(packetInfo, ('192.168.1.255', 2300))
-            timeout = time.time() + 10
+            timeout = time.time() + 4
             registed = False
             while True:
                 if(not self.okFromID.empty()):
@@ -149,7 +150,7 @@ class DistributedMemoryProtocol:
     def classifyPackets(self):
         while True:
             if(not self.waitSendId):
-                IPID= '127.0.0.1'#'192.168.1.30' #Cambiar
+                IPID= '192.168.1.31' #Cambiar
                 port = 6000
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
