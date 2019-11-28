@@ -11,7 +11,7 @@ from datetime import datetime
 from tabulate import tabulate
 
 class FileSystem:
-    
+
     def __init__(self, fileName, diskSize):
         self.diskSize = diskSize
         self.fileName = fileName
@@ -26,7 +26,7 @@ class FileSystem:
 
     def getSpaceAvailable(self):
         return self.getContent(0,4)[0]
-    
+
     def setSpaceAvailable(self, spaceAvailable):
         self.file.seek(0)
         self.file.write(struct.pack("I", spaceAvailable))
@@ -38,10 +38,10 @@ class FileSystem:
         offset = self.getMetaDataOffset()
         self.file.seek(4)
         self.file.write(struct.pack("I", offset + 12))
-    
+
     def getPagesOffset(self):
         return self.getContent(8,4)[0]
-    
+
     def setPagesOffset(self, pageSize):
         offset = self.getPagesOffset()
         self.file.seek(8)
@@ -96,23 +96,23 @@ class FileSystem:
             print("Escritura fallida. No hay suficiente espacio disponible.\nEspacio disponible:", self.getSpaceAvailable(),"bytes.")
 
     def getPageData(self, pageID):
-        index = 12   # Al inicio esta diskAvailable, metaDataOffset y pageOffset. 12 es para llegar a los metadatos 
+        index = 12   # Al inicio esta diskAvailable, metaDataOffset y pageOffset. 12 es para llegar a los metadatos
         self.file.seek(index)
         currentPageID = self.getContent(index, 4)[0]
-        while currentPageID != pageID and index < self.getMetaDataOffset(): 
+        while currentPageID != pageID and index < self.getMetaDataOffset():
             index += 12
             currentPageID = self.getContent(index, 4)[0]
         if currentPageID == pageID:
-            index += 4 # Movimiento para agarrar solo pageSize y la direccion de la pagina actual 
+            index += 4 # Movimiento para agarrar solo pageSize y la direccion de la pagina actual
             metaData = self.getContent(index, 8)
             data = self.getContent(metaData[1]+8,metaData[0])
             self.updateDateAccessed(metaData[1]+4)
             print(data)
             return data
-        else: 
+        else:
             print("La pagina con id", pageID,"no se encuentra en este nodo.")
             return -1"""
-    
+
     def savePage(self):
         while True:
             self.protocol.sendInfoToNode.acquire()
@@ -134,30 +134,30 @@ class FileSystem:
         while True:
             self.protocol.requestInfoToNode.acquire()
             pageID = self.protocol.pageInfo[0]
-            index = 12   # Al inicio esta diskAvailable, metaDataOffset y pageOffset. 12 es para llegar a los metadatos 
+            index = 12   # Al inicio esta diskAvailable, metaDataOffset y pageOffset. 12 es para llegar a los metadatos
             self.file.seek(index)
             currentPageID = self.getContent(index, 4)[0]
-            while currentPageID != pageID and index < self.getMetaDataOffset(): 
+            while currentPageID != pageID and index < self.getMetaDataOffset():
                 index += 12
                 currentPageID = self.getContent(index, 4)[0]
             if currentPageID == pageID:
-                index += 4 # Movimiento para agarrar solo pageSize y la direccion de la pagina actual 
+                index += 4 # Movimiento para agarrar solo pageSize y la direccion de la pagina actual
                 metaData = self.getContent(index, 8)
                 #self.protocol.pageInfo.append(self.getSpaceAvailable())
                 data = self.getContent(metaData[1]+8,metaData[0])
                 for x in data:
                     self.protocol.pageInfo.append(x)
                 self.updateDateAccessed(metaData[1]+4)
-                self.protocol.infoAlreadyAvailable.release()   
+                self.protocol.infoAlreadyAvailable.release()
                 print(data)
             else:
-                print("Page", pageID, "was not found in this node.") 
+                print("Page", pageID, "was not found in this node.")
                 #print("La pagina con id", pageID,"no se encuentra en este nodo.")
-    
+
     def getPageDates(self, index):
         self.file.seek(index)
         return self.getContent(index, 8)
-    
+
     def listFiles(self):
         while True:
             #print("Si quiere ver informacion sobre las paginas actuales ubicadas en este nodo, digite ls")
@@ -186,7 +186,7 @@ class FileSystem:
         thread.start()
         thread = threading.Thread(target=self.getPageData)
         thread.start()
-        
+
 if len(sys.argv) > 2:
     name = sys.argv[1]
     size = int(sys.argv[2])
@@ -216,5 +216,5 @@ else:
     #fs.getPageData(9)
     fs.listFiles()
     #fs.readBinaryFile()
-except: 
+except:
     print("Ejecucion es: filesystem.py nombreDelArchivo tamanoDelArchivo")"""

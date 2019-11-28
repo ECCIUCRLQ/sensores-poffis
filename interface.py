@@ -9,14 +9,14 @@ from plotter import Plotter
 PAGES_IN_SYSTEM = 4
 #3600s * 24h * 2ints-of-data
 #PAGE_SIZE = 172800
-PAGE_SIZE = 1000
+PAGE_SIZE = 10
 #Flag values
 NOT_FULL = 0
 FULL = 1
 
 class Interface:
 	lock = None
-	#La cola se recibe como parametro ya que fue creada por el servidor para 
+	#La cola se recibe como parametro ya que fue creada por el servidor para
 	#compartirla con los recolectores.
 	#Cada linea de la matriz(tabla) de la interfaz es asi:
 	#[Thread_id, offset, pages_owned]
@@ -29,14 +29,14 @@ class Interface:
 			id_table.append(row)
 
 		self.run(interface_queue, id_table, memoryManager, plotter)
-	
+
 	def run(self, interface_queue, id_table, memoryManager, plotter):
 		thread = threading.Thread(target=self.plotRequested, args=(id_table, memoryManager,plotter))
 		thread.start()
 		thread = threading.Thread(target=self.dataEntry, args=(interface_queue,id_table, memoryManager) )
 		thread.start()
 
-	def plotRequested(self, id_table, memoryManager, plotter): 
+	def plotRequested(self, id_table, memoryManager, plotter):
 		sensorRequestedPlot = -1
 		counter = 0
 		print("Primer Sensor: ")
@@ -44,18 +44,18 @@ class Interface:
 			print("Digite cuantos sensores desea graficar")
 			numSensorsWanted = int(input())
 			plotter.dataBuffer[:]=[]
-			plotter.dataBuffer = [None] * numSensorsWanted 
+			plotter.dataBuffer = [None] * numSensorsWanted
 			for x in range(0,numSensorsWanted):
 				print("Digite sensor numero", x, ": ")
-				sensorRequestedPlot = int(input()) 
+				sensorRequestedPlot = int(input())
 				if sensorRequestedPlot > -1:
 					counter += 1
-					plotter.dataBuffer[x] = [] 
-					for v in id_table[sensorRequestedPlot][2]:	
+					plotter.dataBuffer[x] = []
+					for v in id_table[sensorRequestedPlot][2]:
 						self.lock.acquire()
 						plotter.dataBuffer[x].extend( memoryManager.requestPage(v) )
-						self.lock.release()	
-							
+						self.lock.release()
+
 			if counter == numSensorsWanted:
 				plotter.plot(numSensorsWanted)
 				counter = 0
@@ -89,5 +89,3 @@ class Interface:
 						else:
 							self.lock.release()
 							print("Not enough space.")
-
-	
