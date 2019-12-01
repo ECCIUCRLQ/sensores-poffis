@@ -79,12 +79,13 @@ class DistributedInterfaceProtocol:
 		requester = threading.Thread(target = self.requestPage)
 		saver = threading.Thread(target = self.savePage)
 		sender = threading.Thread(target=self.sendPage)
-		classifierML.start()
 		classifierMD.start()
 		classifierBroadcast.start()
 		requester.start()
 		saver.start()
 		sender.start()
+		
+		classifierML.start()
 
 
 	def savePage(self):
@@ -142,6 +143,7 @@ class DistributedInterfaceProtocol:
 							break
 					else:
 						okMessage = self.ok.get()
+						print('llegue aqui')
 						#self.ok.put(okMessage) #REVISAR
 
 
@@ -159,6 +161,7 @@ class DistributedInterfaceProtocol:
 					sendInfo = packetStruct.pack( *( tuple(packet) ) )
 					self.socketML.send(sendInfo)
 					self.socketML.close()
+					print ('cerre socket')
 					self.kappa.release()
 					self.waitingToSendToML = False
 					self.okeyAlreadyRead.release()
@@ -204,6 +207,7 @@ class DistributedInterfaceProtocol:
 				packageReceived = self.receiveFromNodes.get()
 				self.socketML.send(packageReceived)
 				self.socketML.close()
+				print('socket closed')
 				self.kappa.release()
 				self.waitingToSendToML = False
 
@@ -212,6 +216,7 @@ class DistributedInterfaceProtocol:
 
 
 	def classifyPacketsFromML(self): ## Desempaquetar solo para verificar códigos de operación, en las colas deben guardarse como vienen.
+		sleep(10)		
 		while True:
 			packetStruct = struct.Struct('1s')
 			while True:
@@ -222,8 +227,10 @@ class DistributedInterfaceProtocol:
 					port = 6021
 					s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
 					s.bind( ( host, port ) )
-					s.listen( 1 )
+					s.listen( )
+					print('pase listen')
 					self.socketML,addr = s.accept()
+					print('pase accept')
 					data = self.socketML.recv(700000)
 					if(data):
 						self.waitingToSendToML = True
@@ -250,6 +257,7 @@ class DistributedInterfaceProtocol:
 							dataReceived = []
 							pageID = unpackedData[1]
 							pageID = struct.unpack('>H',b'\x00' + pageID )[0]
+							print(pageID)
 							dataReceived.append(operationCode)
 							dataReceived.append(pageID)
 							dataReceived.append(size*4)
@@ -280,6 +288,7 @@ class DistributedInterfaceProtocol:
 						pageID = struct.unpack('>H',b'\x00' + unpackedData[1])[0]
 						spaceAvailable = unpackedData[2]
 						data = []
+						print(pageID)
 						data.append(pageID)
 						data.append(spaceAvailable)
 						self.ok.put(data)

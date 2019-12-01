@@ -8,7 +8,7 @@ import random
 import threading
 from distributed_memory_protocol import DistributedMemoryProtocol
 from datetime import datetime
-from tabulate import tabulate
+#from tabulate import tabulate
 
 class FileSystem:
 

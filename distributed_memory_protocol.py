@@ -40,6 +40,7 @@ class DistributedMemoryProtocol:
     conn = None
     socket = None
     waitSendId = None
+    kappa = None
     
 
     def __init__(self):
@@ -52,6 +53,7 @@ class DistributedMemoryProtocol:
         self.infoAlreadyAvailable = threading.Semaphore(0)
         self.sendInfoToNode = threading.Semaphore(0)
         self.infoSetInNode = threading.Semaphore(0)
+        self.kappa = threading.Semaphore(1)
         self.socket = None
         self.waitSendId = False
 
@@ -96,6 +98,7 @@ class DistributedMemoryProtocol:
                 #Enviar paquete a ID
                 self.socket.send(packedData)
                 self.socket.close()
+                self.kappa.release()
                 self.waitSendId = False
                 
     def receivePage(self):
@@ -119,6 +122,7 @@ class DistributedMemoryProtocol:
                 packetData = packetStruct.pack( * ( tuple(packet) ) )
                 self.socket.send(packetData)
                 self.socket.close()
+                self.kappa.release()
                 self.waitSendId = False
                 
 
@@ -150,6 +154,7 @@ class DistributedMemoryProtocol:
     def classifyPackets(self):
         while True:
             if(not self.waitSendId):
+                self.kappa.acquire()
                 IPID= '192.168.1.31' #Cambiar
                 port = 6000
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -192,7 +197,8 @@ class DistributedMemoryProtocol:
                         self.okFromID.put(None)
                         self.waitSendId = False
                         self.socket.close()
-                        s.close()
+                        #s.close()
+                        self.kappa.release()
                 
 
 

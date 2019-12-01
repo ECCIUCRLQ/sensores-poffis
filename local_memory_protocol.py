@@ -72,6 +72,7 @@ class LocalMemoryProtocol:
 
 
 	def savePage(self):
+		a = 0
 		while True:
 			if(self.pagesToSave.qsize() > 1):
 				print ("uff")
@@ -97,27 +98,36 @@ class LocalMemoryProtocol:
 				#print(packetStruct.pack( * ( tuple(packet) ) ) )
 				#Crear Socket
 				self.kappa.acquire()
+				
 				self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 				IPIDLocal = '192.168.1.30' #Cambiar
 				port = 6021
 				connected = False
+				packetData = packetStruct.pack( * ( tuple(packet) ) )
 				while not connected:
 					try:
-						self.socket.connect( ( IPIDLocal, port ) )
 						connected = True
+						self.socket.connect( ( IPIDLocal, port ) )
+						print('socket created')
 						#print( "connection successful" )
+						self.socket.send(packetData)
 					except socket.error:
+						connected = False
 						print( "no ID" )
 						sleep( 2 )
-				packetData = packetStruct.pack( * ( tuple(packet) ) )
-				self.socket.send(packetData)
+				
+				
+				a = a+1
+				print ("se envio" + str(a - 1))
 				self.waitingAnswerFromID = True
 				timeout = time.time() + 10
 				while True:
 					if(self.ok.empty()):
 						if(time.time() > timeout):
 							self.pagesToSave.put(pageRequest)
+							print ('KAPPA')
 							self.waitingAnswerFromID = False
+							#recordar cerrar socket
 							break
 					else:
 						okMessage = self.ok.get()
@@ -143,6 +153,7 @@ class LocalMemoryProtocol:
 					try:
 						self.socket.connect( ( IPIDLocal, port ) )
 						connected = True
+						print('socket created')
 						#print( "connection successful" )
 					except socket.error:
 						print( "no ID" )
@@ -169,6 +180,7 @@ class LocalMemoryProtocol:
 		while True:
 			if(self.waitingAnswerFromID):
 				while(True):
+					#sleep(1)
 					try:
 						data = self.socket.recvfrom(700000)[0]
 						#print(data)
@@ -187,6 +199,7 @@ class LocalMemoryProtocol:
 						unpackedData = list(packetStruct.unpack(data[:2]))
 						typeOk = struct.unpack('>H',b'\x00' + unpackedData[0])[0]
 						pageID = struct.unpack('>H',b'\x00' + unpackedData[1])[0]
+						print(pageID)
 						data = []
 						data.append(typeOk)
 						data.append(pageID)
@@ -208,23 +221,52 @@ class LocalMemoryProtocol:
 					else:
 						print("INVALID OPERATION CODE RECEIVED:" + str(operationCode))
 					self.waitingAnswerFromID = False
+					print('socket closet')
 					self.socket.close()
 					self.kappa.release()
 
-
-'''kappa = LocalMemoryProtocol()
+"""
+#Prueba # 1
+kappa = LocalMemoryProtocol()
 kappa.run()
 kappa2 = []
-for x in range (0,DATA_COUNT+1):
+a = 0
+kappa2.append(a)
+for x in range (0,DATA_COUNT):
 	kappa2.append(x)
 kappa.pagesToSave.put(kappa2)
+sleep(1)
+
+
+kappa.okeyAlreadyRead.acquire()
 while(True):
-	if(not kappa.ok.empty()):
-		kappa2[0] = 1
-		kappa.requestedPages.put(0)
-		break
-while(True):
-	if(not kappa.receivePageFromInterface.empty()):
-		print(kappa.receivePageFromInterface.get())
-		break
+
+	#Espera 1 segundo para que el socket se haya cerrado con éxito
+	sleep(1)
+	a = a + 1
+	kappa2[0] = a
+	if(kappa.pagesToSave.empty()):
+		kappa.pagesToSave.put(kappa2)
+	#Espera a que le notifique que ya llegó el ok
+	kappa.okeyAlreadyRead.acquire()
+	#Espera 1 segundo para que el socket se haya cerrado con éxito
+	sleep(1)
+	if(kappa.requestedPages.empty()):
+		kappa.requestedPages.put(a)
+
+	while True:
+
+		if(not kappa.receivePageFromInterface.empty()):
+			kappa.sendInfoToLocalMemory.acquire()
+			kappa.infoSetInLocalMemory.release()
+			print(kappa.receivePageFromInterface.get())
+			break
+"""
 '''
+#Prueba # 2
+while(True):
+	kappa.okeyAlreadyRead.acquire()
+	sleep(1)
+	a = a + 1
+	kappa2[0] = a
+	kappa.pagesToSave.put(kappa2)'''
