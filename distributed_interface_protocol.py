@@ -6,6 +6,7 @@ import socket
 from time import sleep
 import ipaddress
 import uuid
+import netifaces as ni
 
 ## Operation codes. MD
 SAVE_PAGE = 0
@@ -169,6 +170,7 @@ class DistributedInterfaceProtocol:
 			if(not self.iAmChampionQueue.empty()):
 				#RECORDAR AGARRAR LOS DATOS PARA LAS TABLAS	
 				tablesReceived = self.iAmChampionQueue.get()
+				self.iAmChamp|ionQueue.put(tablesReceived)
 				#Piedo automáticamente
 				alive = False
 
@@ -180,7 +182,7 @@ class DistributedInterfaceProtocol:
 			timeout = time.time() + 1
 			while(time.time() < timeout):
 				if(not self.iAmChampionQueue.empty()):
-						self.iAmChampionQueue.get()
+						kappa = self.iAmChampionQueue.get()
 						print("Me toca darme de putazos")
 		else:
 			print("perdí")
@@ -531,7 +533,9 @@ class DistributedInterfaceProtocol:
 			data = None
 			data,adrr = client.recvfrom(700000) #Agregar este conection en la clase
 			kappa = adrr
-			if(data and not (adrr[0] =="192.168.1.32")):
+			ip = ni.ifaddresses("eno1")[ni.AF_INET][0]['addr']
+			print (ip)
+			if(data and not (adrr[0] == ip)):
 				unpackedData = list(packetStruct.unpack(data[:1]))
 				operationCode =  struct.unpack('>H',b'\x00' + unpackedData[0] )[0]
 				if(operationCode == IWANTTOBE):
@@ -541,7 +545,8 @@ class DistributedInterfaceProtocol:
 					receivedMACAddress = int.from_bytes(unpackedData[1],byteorder = "big",signed='False')
 					round = struct.unpack('>H',b'\x00' + unpackedData[2] )[0]
 					# Meter en la cola -> (receivedMACAddress , round)
-					self.iWantToBeQueue.put((receivedMACAddress,round))
+					if(not (receivedMACAddress == self.MACAdress)):
+						self.iWantToBeQueue.put((receivedMACAddress,round))
 
 
 				if(operationCode== IAMACTIVE):
