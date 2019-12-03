@@ -67,6 +67,7 @@ class DistributedInterfaceProtocol:
 
 	def __init__(self):
 		self.MACAdress = uuid.getnode()
+		print(self.MACAdress)
 		#print(kappa)
 		#print(BytesMACAdrress)
 		self.iWantToBeQueue = queue.Queue(QUEUE_SIZE)
@@ -113,6 +114,12 @@ class DistributedInterfaceProtocol:
 		requester = threading.Thread(target = self.requestPage)
 		saver = threading.Thread(target = self.savePage)
 		sender = threading.Thread(target=self.sendPage)
+		classifierML.start()
+		classifierMD.start()
+		classifierBroadcastMD.start()
+		saver.start()
+		sender.start()
+		requester.start()
 		self.iAmIDActive = True
 
 	def runPasive(self):
@@ -130,9 +137,10 @@ class DistributedInterfaceProtocol:
 		self.sendIWantToBeChampion(round)
 		#Crear timer de 3 segundos simbolizando la champions -> while True
 		timeout = time.time() + 3
-		while(time.time() < timeout):
+		while(time.time() < timeout and alive):
 			#Si me llega uno de quiero ser campeon
 			if(not self.iWantToBeQueue.empty()):
+				print('kappa')
 				messageFromOtherID = self.iWantToBeQueue.get()
 				# Compara la ronda, si es igual si juega
 				if(messageFromOtherID[1] == round):
@@ -172,6 +180,7 @@ class DistributedInterfaceProtocol:
 			timeout = time.time() + 1
 			while(time.time() < timeout):
 				if(not self.iAmChampionQueue.empty()):
+						self.iAmChampionQueue.get()
 						print("Me toca darme de putazos")
 		else:
 			print("perdí")
@@ -521,7 +530,8 @@ class DistributedInterfaceProtocol:
 			packetStruct = struct.Struct('1s')
 			data = None
 			data,adrr = client.recvfrom(700000) #Agregar este conection en la clase
-			if(data):
+			kappa = adrr
+			if(data and not (adrr[0] =="192.168.1.32")):
 				unpackedData = list(packetStruct.unpack(data[:1]))
 				operationCode =  struct.unpack('>H',b'\x00' + unpackedData[0] )[0]
 				if(operationCode == IWANTTOBE):

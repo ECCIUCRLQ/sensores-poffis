@@ -3,6 +3,7 @@ from distributed_interface_protocol import DistributedInterfaceProtocol
 import struct
 import threading
 import time
+from time import sleep
 
 ## Page table number of rows.
 MAX_PAGE_COUNT = 256
