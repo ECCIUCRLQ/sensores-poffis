@@ -29,6 +29,7 @@ def main():
 		package = [int(time.time()),random.randint(100,500),0]
 		interface_queue.put(package)
 		#Second sensor 
+		time.sleep(GENERATION_TIME+0.5)
 		package = [int(time.time()),random.randint(100,500),1]
 		interface_queue.put(package)
 		

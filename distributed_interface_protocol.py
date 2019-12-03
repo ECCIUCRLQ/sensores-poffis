@@ -141,7 +141,7 @@ class DistributedInterfaceProtocol:
 		while(time.time() < timeout and alive):
 			#Si me llega uno de quiero ser campeon
 			if(not self.iWantToBeQueue.empty()):
-				print('kappa')
+				#print('kappa')
 				messageFromOtherID = self.iWantToBeQueue.get()
 				# Compara la ronda, si es igual si juega
 				if(messageFromOtherID[1] == round):
@@ -222,9 +222,9 @@ class DistributedInterfaceProtocol:
 
 		for x in range (0,row2):
 			packetFormat = packetFormat + '1s I I'
-			packet.append(bytearray([rowdata1[x][0]]))
-			packet.append(bytearray([rowdata1[x][1]]))
-			packet.append(bytearray([rowdata1[x][2]]))
+			packet.append(bytearray([rowdata2[x][0]]))
+			packet.append(int(ipaddress.IPv4Address(rowdata2[x][1])))
+			packet.append(rowdata2[x][2])
 
 		packetStruct = struct.Struct(packetFormat)
 
@@ -573,13 +573,13 @@ class DistributedInterfaceProtocol:
 					nodeTableSize = struct.unpack('>H',b'\x00' + unpackedData[2] )[0]
 					for x in range(0,pageTableSize):
 						packetFormat = packetFormat + '1s 1s'
-					for x in range(0,pageTableSize):
+					for x in range(0,nodeTableSize):
 						packetFormat = packetFormat + '1s I I'
 					packetStruct = struct.Struct(packetFormat)
 					unpackedData = list(packetStruct.unpack(data))
 					pageTableInfo = []
 					nodeTableInfo = []
-					nodeTableStart = 0
+					nodeTableStart = 3
 					for x in range (3,((pageTableSize*2)+3),2):
 						pageID = struct.unpack('>H',b'\x00' + unpackedData[x] )[0]
 						nodeID = struct.unpack('>H',b'\x00' + unpackedData[x+1] )[0]
@@ -587,11 +587,14 @@ class DistributedInterfaceProtocol:
 						nodeTableStart = x+2
 					for x in range(nodeTableStart,nodeTableStart + (nodeTableSize * 3),3):
 						nodeID =  struct.unpack('>H',b'\x00' + unpackedData[x] )[0]
-						IP = ipaddress.IPv4Address(unpackedData[x+1])
+						IP = str(ipaddress.IPv4Address(unpackedData[x+1]))
 						spaceAvailable = unpackedData[x+2]
 						nodeTableInfo.append({nodeID,IP,spaceAvailable})
 					#Meter en cola de IAMACTIVE -> {tamaño tabla de páginas, tamaño tabla de nodos, tabla de pagina, tabla de nodo}
-					self.iAmChampionQueue.put((pageTableInfo,nodeTableInfo))
+					datalist = []
+					datalist.append(pageTableInfo)
+					datalist.append(nodeTableInfo)
+					self.iAmChampionQueue.put(datalist)
 
 
 				if(operationCode == KEEPALIVE):

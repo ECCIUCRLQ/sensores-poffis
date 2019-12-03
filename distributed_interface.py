@@ -70,6 +70,7 @@ class DistributedInterface:
 				timeout = time.time() + 2
 				while(time.time() < timeout):
 					if not self.messenger.keepAliveQueue.empty():
+						tablesReceived = self.messenger.keepAliveQueue.get()
 						if(not tablesReceived == None):
 							#Actualizar tablas
 							self.updateTables(tablesReceived)
@@ -165,7 +166,7 @@ class DistributedInterface:
 
 	def sendKeepAlivesToIDs(self):
 		while(True):
-			sleep(2)
+			sleep(0.5)
 			self.lock.acquire()
 			self.messenger.sendKeepAlive(self.pageTable,self.changesInPageTable,self.nodeTable,self.changesInNodeTable)
 			for x in range (0,MAX_PAGE_COUNT):
@@ -184,7 +185,6 @@ class DistributedInterface:
 		nodeCount = 0
 		pageList = []
 		nodeList = []
-		self.lock.acquire()
 		for x in range (0,MAX_PAGE_COUNT):
 			if(self.pageTable[x][1] > -1):
 				pageCount = pageCount + 1
@@ -194,7 +194,6 @@ class DistributedInterface:
 			if(self.nodeTable[x][2] > -1):
 				nodeCount = nodeCount + 1
 				nodeList.append((self.nodeTable[x][0],self.nodeTable[x][1],self.nodeTable[x][2]))
-		self.lock.release()
 
 		self.messenger.sendIAmChampion(pageCount,nodeCount,pageList,nodeList)
 
