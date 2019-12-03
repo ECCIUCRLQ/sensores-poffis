@@ -138,7 +138,10 @@ class DistributedMemoryProtocol:
             server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             # Permitir broadcast
             server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            #addr = ('192.168.1.29',2300)
+            #server.bind(addr)
             server.sendto(packetInfo, ('192.168.1.255', 2300))
+            
             timeout = time.time() + 4
             registed = False
             while True:
@@ -155,7 +158,7 @@ class DistributedMemoryProtocol:
         while True:
             if(not self.waitSendId):
                 self.kappa.acquire()
-                IPID= '192.168.1.31' #Cambiar
+                IPID= '192.168.1.32' #Cambiar
                 port = 6000
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)

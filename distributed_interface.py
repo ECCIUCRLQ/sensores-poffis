@@ -2,6 +2,7 @@
 from distributed_interface_protocol import DistributedInterfaceProtocol
 import struct
 import threading
+import time
 
 ## Page table number of rows.
 MAX_PAGE_COUNT = 256
@@ -32,6 +33,8 @@ class DistributedInterface:
 	def __init__(self):
 		self.pageTable = [None]*MAX_PAGE_COUNT	
 		self.nodeTable = [None]*MAX_NODE_COUNT
+		self.changesInPageTable = [False]*MAX_PAGE_COUNT
+		self.changesInNodeTable = [False]*MAX_NODE_COUNT
 		## La primera columna indica el número de página (coincide con número de fila) y la segunda columna el id del nodo 
 		## donde se encuentra guardada, con -1 se indica que la página aún no ha sido almacenada en ningún nodo (está en memoria local).
 		for row in range(0, MAX_PAGE_COUNT):
@@ -53,8 +56,25 @@ class DistributedInterface:
 					self.nodeTable[row][col] = -1 
 	
 		self.messenger =  DistributedInterfaceProtocol()
-		self.messenger.run() 
-		self.run() 
+		tablesReceived = self.messenger.run()
+		if(self.messenger.iAmIDActive):
+			self.run()
+		else:
+			if(tablesReceived != None):
+				#Se actualizan tablas según tablesReceived
+				self.updateTables(tablesReceived)
+
+			while not self.messenger.iAmIDActive:
+				timeout = time.time() + 2
+				while(time.time() < timeout):
+					if not self.messenger.keepAliveQueue.empty():
+						if(not tablesReceived == None):
+							#Actualizar tablas
+							self.updateTables(tablesReceived)
+						timeout = time.time() + 2
+				self.messenger.iAmIDActive,tablesReceived = self.messenger.champions(False)
+			self.messenger.runActive()
+			self.run()
 	
 	def run(self):
 		## Hilo que atiende solicitudes de IP por parte del protocolo, para guardar o solicitar páginas en un nodo.
@@ -63,6 +83,10 @@ class DistributedInterface:
 		## Hilo que atiende el registro de los nuevos nodos.
 		newNodesReceptionist = threading.Thread(target = self.registerNewNode)
 		newNodesReceptionist.start()
+		# Crear hilo que esté enviando los cambios a las tablas cada 2 segundos
+		sendKeepAlivesThread = threading.Thread(target = self.sendKeepAlivesToIDs)
+		sendKeepAlivesThread.start()
+
 		
 	def listenIpRequests(self):
 		while True:
@@ -104,11 +128,22 @@ class DistributedInterface:
 		
 	def updatePageTable(self, pageId, nodeId):
 		self.pageTable[pageId][NODE_ID] = nodeId
+		self.changesInPageTable[pageId] = True
 				
 	def updateNodeTable(self, nodeId, nodeIp, availableSpace):
 		self.nodeTable[nodeId][AVAILABLE_SPACE] = availableSpace
 		self.nodeTable[nodeId][NODE_IP] = nodeIp
-	
+		self.changesInNodeTable[nodeId] = True
+
+	def updateTables(self, tablesReceived):
+		assert(not (tablesReceived == None))
+		for x in range (0,len(tablesReceived[0])): #Lista con cambios a la page table
+			self.updatePageTable(tablesReceived[0][x][0],tablesReceived[0][x][1])
+
+		for x in range (0,len(tablesReceived[1])): #Lista con cambios en la node table
+			self.updateNodeTable(tablesReceived[1][x][0],tablesReceived[1][x][1],tablesReceived[1][x][2])
+
+
 	# First fit.
 	def selectNode(self, pageSize, pageId):
 		assignedNode = -1
@@ -119,6 +154,19 @@ class DistributedInterface:
 				break
 				
 		return assignedNode 
+
+	def sendKeepAlivesToIDs(self):
+		while(True):
+			sleep(2)
+			#MUTEX abrir
+			self.messenger.sendKeepAlive(self.pageTable,self.changesInPageTable,self.nodeTable,self.changesInNodeTable)
+			for x in range (0,MAX_PAGE_COUNT):
+				self.changesInPageTable[x] = False
+
+			for x in range (0,MAX_NODE_COUNT):
+				self.changesInNodeTable[x] = False
+
+			#Mutex cerrar
 
 kappa = DistributedInterface()
 

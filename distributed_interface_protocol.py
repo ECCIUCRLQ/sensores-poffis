@@ -4,14 +4,23 @@ import threading
 import time
 import socket
 from time import sleep
+import ipaddress
+import uuid
 
-## Operation codes.
+## Operation codes. MD
 SAVE_PAGE = 0
 REQUEST_PAGE = 1
 OK = 2
 SEND = 3
 ERROR = 4
 IAMHERE = 5
+
+
+
+## Operation codes. ID
+IWANTTOBE = 0
+IAMACTIVE = 1
+KEEPALIVE = 2
 
 ## Queue size.
 QUEUE_SIZE = 10000
@@ -27,6 +36,11 @@ DATA_COUNT = PAGE_SIZE // DATA_SIZE
 
 
 class DistributedInterfaceProtocol:
+	MACAdress = None
+	#print(kappa)
+	iWantToBeQueue = None
+	iAmChampionQueue = None
+	keepAliveQueue = None
 	receiveFromNodes = None
 	## Request pages by local memory.
 	requestedPages = None
@@ -49,8 +63,15 @@ class DistributedInterfaceProtocol:
 	sizeInNode = 0
 	kappa = None
 	kappa2 = None
+	iAmIDActive = None
 
 	def __init__(self):
+		self.MACAdress = uuid.getnode()
+		#print(kappa)
+		#print(BytesMACAdrress)
+		self.iWantToBeQueue = queue.Queue(QUEUE_SIZE)
+		self.iAmChampionQueue = queue.Queue(QUEUE_SIZE)
+		self.keepAliveQueue = queue.Queue(QUEUE_SIZE)
 		self.receiveFromNodes = queue.Queue(QUEUE_SIZE)
 		self.requestedPages = queue.Queue(QUEUE_SIZE)
 		self.pagesToSave = queue.Queue(QUEUE_SIZE)
@@ -71,21 +92,175 @@ class DistributedInterfaceProtocol:
 		self.waitingForMD = False
 		self.waitingToSendToML = False
 		self.sizeInNode = None
+		self.iAmIDActive = False
 
 	def run(self):
+		
+		classifierBroadcastID = threading.Thread(target = self.classifyPacketsFromBroadcastsFromID)
+		#Aqui va la pelea entre interfaces y se queda aqui mientras no sea activo
+		classifierBroadcastID.start()
+		championsResult,tablesReceived = self.champions(True)
+		if(championsResult):
+			self.runActive()
+		else:
+			self.runPasive()
+		return tablesReceived
+
+	def runActive(self):
 		classifierML = threading.Thread(target = self.classifyPacketsFromML)
 		classifierMD = threading.Thread(target = self.classifyPacketsFromMD)
-		classifierBroadcast = threading.Thread(target = self.classifyPacketsFromBroadcasts)
+		classifierBroadcastMD = threading.Thread(target = self.classifyPacketsFromBroadcastsFromMD)
 		requester = threading.Thread(target = self.requestPage)
 		saver = threading.Thread(target = self.savePage)
 		sender = threading.Thread(target=self.sendPage)
-		classifierMD.start()
-		classifierBroadcast.start()
-		requester.start()
-		saver.start()
-		sender.start()
+		self.iAmIDActive = True
+
+	def runPasive(self):
+		self.iAmIDActive = False
+
+	def champions(self,firstTime):
+		tablesReceived = None
+		round = 0
+		alive = True
+		if(not firstTime):
+			round = 3
+		#Limpiar cola de yo quiero ser campeon
+		self.clearChampionshipQueues()
+		#Mandar broadcast de quiero ser campeón con mi ronda y esperar mensajes de los otros
+		self.sendIWantToBeChampion(round)
+		#Crear timer de 3 segundos simbolizando la champions -> while True
+		timeout = time.time() + 3
+		while(time.time() < timeout):
+			#Si me llega uno de quiero ser campeon
+			if(not self.iWantToBeQueue.empty()):
+				messageFromOtherID = self.iWantToBeQueue.get()
+				# Compara la ronda, si es igual si juega
+				if(messageFromOtherID[1] == round):
+					print("llegó un competidor con ronda: " + str(messageFromOtherID[1]))
+					#Si el mayor el MAC entonces pierdo
+					if( messageFromOtherID[0] > self.MACAdress ):
+						print ("Perdí contra otra MAC, mi MAC es: " + str(self.MACAdress) + " y la que me ganó es: " + str(messageFromOtherID[0]))
+						alive = False
+					#Si es menor entonces le suma uno a ronda y envía yo quiero ser campeón con la ronda
+					elif( messageFromOtherID[0] < self.MACAdress):
+						print ("Gané contra otra MAC, mi MAC es: " + str(self.MACAdress) + " y la que perdió es: " + str(messageFromOtherID[0]))
+						round = round + 1
+						self.sendIWantToBeChampion(round)
+					#Si son iguales hay error
+					else:
+						print ("Error durante la champions, dos con el mismo MAC")
+					
+				# Si es menor la ronda lo ignoro
+				elif(messageFromOtherID[1] < round):
+					print("llegó un competidor con ronda menor: "+ str(messageFromOtherID[1]) + " lo ignoro porque mi ronda es: " + str(round))
+				# Si la ronda es mayor pierdo 
+				elif(messageFromOtherID[1] > round):
+					print("llegó un competidor con ronda mayor: "+ str(messageFromOtherID[1]) + " perdí :( porque mi ronda es:" + str(round)) 
+					alive = False
+			#Si me llega un soy compeón
+			if(not self.iAmChampionQueue.empty()):
+				#RECORDAR AGARRAR LOS DATOS PARA LAS TABLAS	
+				tablesReceived = self.iAmChampionQueue.get()
+				#Piedo automáticamente
+				alive = False
+
+		#Si estoy vivo enviar soy campeón y esperar un segundo por si llega otro soy campeón
+		if(alive):
+			print("gané")
+			self.sendIAmChampion(0,0,0,0)
+			#Si llega otro soy campeón envío un quiero ser campeón
+			timeout = time.time() + 1
+			while(time.time() < timeout):
+				if(not self.iAmChampionQueue.empty()):
+						print("Me toca darme de putazos")
+		else:
+			print("perdí")
+			#Quedarme esperando el IAmChampion por 5 segundos
+			timeout = time.time() + 5
+			thereIsAWinner = False
+			while(time.time() < timeout):
+				if(not self.iAmChampionQueue.empty()):
+					tablesReceived = self.iAmChampionQueue.get()
+					thereIsAWinner = True
+			if(not thereIsAWinner):
+				return self.champions(firstTime)
+			
+		return alive,tablesReceived
 		
-		classifierML.start()
+	def sendIWantToBeChampion(self, round):
+		bytesMACAdrress = self.MACAdress.to_bytes(6,byteorder = "big")
+		packet = (bytearray([IWANTTOBE]),bytearray([bytesMACAdrress[0],bytesMACAdrress[1],bytesMACAdrress[2],bytesMACAdrress[3],bytesMACAdrress[4],bytesMACAdrress[5]]),bytearray([round]))
+		packetStruct = struct.Struct('1s 6s 1s')
+		packetInfo = packetStruct.pack(*(packet))
+		server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) # UDP
+		server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		# Permitir broadcast
+		server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+		server.sendto(packetInfo, ('192.168.1.255', 6666))
+
+	def sendIAmChampion(self, row1, row2, rowdata1, rowdata2):
+		packetStruct = struct.Struct('1s 1s 1s')
+		packet = (bytearray([IAMACTIVE]),bytearray([0]),bytearray([0]))
+		packetInfo = packetStruct.pack(*(packet))
+		server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) # UDP
+		server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		# Permitir broadcast
+		server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+		server.sendto(packetInfo, ('192.168.1.255', 6666))
+	
+	def clearChampionshipQueues(self):
+		while not self.iWantToBeQueue.empty():
+			self.iWantToBeQueue.get()
+		while not self.iAmChampionQueue.empty():
+			self.iAmChampionQueue.get()
+
+	def sendKeepAlive(self, pageTable, changesInPageTable, nodeTable, changesInNodeTable):
+		packetFormat = '1s 1s 1s'
+		packet = []
+		packet.append(bytearray([KEEPALIVE]))
+		numberOfChangesInPageTable = 0
+		numberOfChangesInNodeTable = 0
+
+		changesInPageTableData = []
+		changesInNodeTableData = []
+
+		for x in range (0,len(changesInPageTable)):
+			if(changesInPageTable[x]):
+				numberOfChangesInPageTable =  numberOfChangesInPageTable + 1
+				changesInPageTableData.append((pageTable[x][0],pageTable[x][1]))
+
+		for x in range (0,len(changesInNodeTable)):
+			if(changesInPageTable[x]):
+				numberOfChangesInNodeTable =  numberOfChangesInNodeTable + 1
+				changesInNodeTableData.append((nodeTable[x][0],nodeTable[x][1],nodeTable[x][2]))
+
+		packet.append(bytearray([numberOfChangesInPageTable]))
+		packet.append(bytearray([numberOfChangesInNodeTable]))
+
+		for x in range (0,len(changesInPageTableData)):
+			packetFormat = packetFormat + '1s 1s'
+			packet.append(bytearray([changesInPageTableData[x][0]]))
+			packet.append(bytearray([changesInPageTableData[x][1]]))
+
+		for x in range (0,len(changesInNodeTableData)):
+			packetFormat = packetFormat + '1s I I'
+			packet.append(bytearray([changesInNodeTableData[x][0]]))
+			packet.append( int(ipaddress.IPv4Address(changesInNodeTableData[x][1]) ) )
+			packet.append(changesInNodeTableData[x][2])
+
+		packetStruct = struct.Struct(packetFormat)
+		packetData = packetStruct.pack(*(tuple(packet)))
+
+		server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) # UDP
+		server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		# Permitir broadcast
+		server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+		server.sendto(packetData, ('192.168.1.255', 6666))
+
+
+
+
+
 
 
 	def savePage(self):
@@ -317,7 +492,7 @@ class DistributedInterfaceProtocol:
 					self.waitingForMD = False
 
 
-	def classifyPacketsFromBroadcasts(self):
+	def classifyPacketsFromBroadcastsFromMD(self):
 		client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) # UDP
 		client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
 		client.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -336,6 +511,91 @@ class DistributedInterfaceProtocol:
 					unpackedData = list(packetStruct.unpack(data))
 					self.newNodes.put((unpackedData[1],adrr[0]))
 					self.sendOk(adrr[0])
+		
+	def classifyPacketsFromBroadcastsFromID(self):
+		client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) # UDP
+		client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+		client.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+		client.bind(('', 6666)) #Cambiar puerto
+		while True:
+			packetStruct = struct.Struct('1s')
+			data = None
+			data,adrr = client.recvfrom(700000) #Agregar este conection en la clase
+			if(data):
+				unpackedData = list(packetStruct.unpack(data[:1]))
+				operationCode =  struct.unpack('>H',b'\x00' + unpackedData[0] )[0]
+				if(operationCode == IWANTTOBE):
+					packetFormat = '1s 6s 1s'
+					packetStruct = struct.Struct(packetFormat)
+					unpackedData = list(packetStruct.unpack(data))
+					receivedMACAddress = int.from_bytes(unpackedData[1],byteorder = "big",signed='False')
+					round = struct.unpack('>H',b'\x00' + unpackedData[2] )[0]
+					# Meter en la cola -> (receivedMACAddress , round)
+					self.iWantToBeQueue.put((receivedMACAddress,round))
+
+
+				if(operationCode== IAMACTIVE):
+					packetFormat = '1s 1s 1s'
+					packetStruct = struct.Struct(packetFormat)
+					unpackedData = list(packetStruct.unpack(data[:3]))
+					pageTableSize = struct.unpack('>H',b'\x00' + unpackedData[1] )[0]
+					nodeTableSize = struct.unpack('>H',b'\x00' + unpackedData[2] )[0]
+					for x in range(0,pageTableSize):
+						packetFormat = packetFormat + '1s 1s'
+					for x in range(0,pageTableSize):
+						packetFormat = packetFormat + '1s I I'
+					packetStruct = struct.Struct(packetFormat)
+					unpackedData = list(packetStruct.unpack(data))
+					pageTableInfo = []
+					nodeTableInfo = []
+					nodeTableStart = 0
+					for x in range (3,((pageTableSize*2)+3),2):
+						pageID = struct.unpack('>H',b'\x00' + unpackedData[x] )[0]
+						nodeID = struct.unpack('>H',b'\x00' + unpackedData[x+1] )[0]
+						pageTableInfo.append({pageID,nodeID})
+						nodeTableStart = x+2
+					for x in range(nodeTableStart,nodeTableStart + (nodeTableSize * 3),3):
+						nodeID =  struct.unpack('>H',b'\x00' + unpackedData[x] )[0]
+						IP = ipaddress.IPv4Address(unpackedData[x+1])
+						spaceAvailable = unpackedData[x+2]
+						nodeTableInfo.append({nodeID,IP,spaceAvailable})
+					#Meter en cola de IAMACTIVE -> {tamaño tabla de páginas, tamaño tabla de nodos, tabla de pagina, tabla de nodo}
+					self.iAmChampionQueue.put((pageTableInfo,nodeTableInfo))
+
+
+				if(operationCode == KEEPALIVE):
+					packetFormat = '1s 1s 1s'
+					packetStruct = struct.Struct(packetFormat)
+					unpackedData = list(packetStruct.unpack(data[:3]))
+					pageTableSize = struct.unpack('>H',b'\x00' + unpackedData[1] )[0]
+					nodeTableSize = struct.unpack('>H',b'\x00' + unpackedData[2] )[0]
+					for x in range(0,pageTableSize):
+						packetFormat = packetFormat + '1s 1s'
+					for x in range(0,pageTableSize):
+						packetFormat = packetFormat + '1s I I'
+					packetStruct = struct.Struct(packetFormat)
+					unpackedData = list(packetStruct.unpack(data))
+					pageTableInfo = []
+					nodeTableInfo = []
+					nodeTableStart = 0
+					for x in range (3,((pageTableSize*2)+3),2):
+						pageID = struct.unpack('>H',b'\x00' + unpackedData[x] )[0]
+						nodeID = struct.unpack('>H',b'\x00' + unpackedData[x+1] )[0]
+						pageTableInfo.append({pageID,nodeID})
+						nodeTableStart = x+2
+					for x in range(nodeTableStart,nodeTableStart + (nodeTableSize * 3),3):
+						nodeID =  struct.unpack('>H',b'\x00' + unpackedData[x] )[0]
+						IP = str(ipaddress.IPv4Address(unpackedData[x+1]))
+						spaceAvailable = unpackedData[x+2]
+						nodeTableInfo.append({nodeID,IP,spaceAvailable})
+
+					#Meter en cola de KEEPALIVE -> {tabla de pagina, tabla de nodo}
+					self.keepAliveQueue.put((pageTableInfo,nodeTableInfo))
+
+
+
+
+
 
 
 	def sendOk(self,adrr):
