@@ -32,6 +32,7 @@ REQUEST_PAGE = 1
 
 class DistributedInterface:
 	def __init__(self):
+		self.lock = threading.Lock()
 		self.pageTable = [None]*MAX_PAGE_COUNT	
 		self.nodeTable = [None]*MAX_NODE_COUNT
 		self.changesInPageTable = [False]*MAX_PAGE_COUNT
@@ -128,21 +129,27 @@ class DistributedInterface:
 		
 		
 	def updatePageTable(self, pageId, nodeId):
+		self.lock.acquire()
 		self.pageTable[pageId][NODE_ID] = nodeId
 		self.changesInPageTable[pageId] = True
+		self.lock.release()
 				
 	def updateNodeTable(self, nodeId, nodeIp, availableSpace):
+		self.lock.acquire()
 		self.nodeTable[nodeId][AVAILABLE_SPACE] = availableSpace
 		self.nodeTable[nodeId][NODE_IP] = nodeIp
 		self.changesInNodeTable[nodeId] = True
+		self.lock.release()
 
 	def updateTables(self, tablesReceived):
+		self.lock.acquire()
 		assert(not (tablesReceived == None))
 		for x in range (0,len(tablesReceived[0])): #Lista con cambios a la page table
 			self.updatePageTable(tablesReceived[0][x][0],tablesReceived[0][x][1])
 
 		for x in range (0,len(tablesReceived[1])): #Lista con cambios en la node table
 			self.updateNodeTable(tablesReceived[1][x][0],tablesReceived[1][x][1],tablesReceived[1][x][2])
+		self.lock.release()
 
 
 	# First fit.
@@ -159,7 +166,7 @@ class DistributedInterface:
 	def sendKeepAlivesToIDs(self):
 		while(True):
 			sleep(2)
-			#MUTEX abrir
+			self.lock.acquire()
 			self.messenger.sendKeepAlive(self.pageTable,self.changesInPageTable,self.nodeTable,self.changesInNodeTable)
 			for x in range (0,MAX_PAGE_COUNT):
 				self.changesInPageTable[x] = False
@@ -167,7 +174,31 @@ class DistributedInterface:
 			for x in range (0,MAX_NODE_COUNT):
 				self.changesInNodeTable[x] = False
 
-			#Mutex cerrar
+			if(not (self.messenger.iWantToBeQueue.empty())):
+				self.sendIAmActiveToIDs()
+
+			self.lock.release()
+	
+	def sendIAmActiveToIDs(self):
+		pageCount = 0
+		nodeCount = 0
+		pageList = []
+		nodeList = []
+		self.lock.acquire()
+		for x in range (0,MAX_PAGE_COUNT):
+			if(self.pageTable[x][1] > -1):
+				pageCount = pageCount + 1
+				pageList.append((self.pageTable[x][0],self.pageTable[x][1]))
+
+		for x in range (0,MAX_NODE_COUNT):
+			if(self.nodeTable[x][2] > -1):
+				nodeCount = nodeCount + 1
+				nodeList.append((self.nodeTable[x][0],self.nodeTable[x][1],self.nodeTable[x][2]))
+		self.lock.release()
+
+		self.messenger.sendIAmChampion(pageCount,nodeCount,pageList,nodeList)
+
+
 
 kappa = DistributedInterface()
 

@@ -170,7 +170,7 @@ class DistributedInterfaceProtocol:
 			if(not self.iAmChampionQueue.empty()):
 				#RECORDAR AGARRAR LOS DATOS PARA LAS TABLAS	
 				tablesReceived = self.iAmChampionQueue.get()
-				self.iAmChamp|ionQueue.put(tablesReceived)
+				self.iAmChampionQueue.put(tablesReceived)
 				#Piedo automáticamente
 				alive = False
 
@@ -210,8 +210,24 @@ class DistributedInterfaceProtocol:
 		server.sendto(packetInfo, ('192.168.1.255', 6666))
 
 	def sendIAmChampion(self, row1, row2, rowdata1, rowdata2):
-		packetStruct = struct.Struct('1s 1s 1s')
-		packet = (bytearray([IAMACTIVE]),bytearray([0]),bytearray([0]))
+		packetFormat = '1s 1s 1s'
+		packet = []
+		packet.append(bytearray([IAMACTIVE]))
+		packet.append(bytearray([row1]))
+		packet.append(bytearray([row2]))
+		for x in range (0,row1):
+			packetFormat = packetFormat + '1s 1s'
+			packet.append(bytearray([rowdata1[x][0]]))
+			packet.append(bytearray([rowdata1[x][1]]))
+
+		for x in range (0,row2):
+			packetFormat = packetFormat + '1s I I'
+			packet.append(bytearray([rowdata1[x][0]]))
+			packet.append(bytearray([rowdata1[x][1]]))
+			packet.append(bytearray([rowdata1[x][2]]))
+
+		packetStruct = struct.Struct(packetFormat)
+
 		packetInfo = packetStruct.pack(*(packet))
 		server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) # UDP
 		server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -534,7 +550,7 @@ class DistributedInterfaceProtocol:
 			data,adrr = client.recvfrom(700000) #Agregar este conection en la clase
 			kappa = adrr
 			ip = ni.ifaddresses("eno1")[ni.AF_INET][0]['addr']
-			print (ip)
+			#print (ip)
 			if(data and not (adrr[0] == ip)):
 				unpackedData = list(packetStruct.unpack(data[:1]))
 				operationCode =  struct.unpack('>H',b'\x00' + unpackedData[0] )[0]
