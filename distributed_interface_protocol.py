@@ -37,6 +37,12 @@ DATA_COUNT = PAGE_SIZE // DATA_SIZE
 ## Direccion IP 
 IDIP  = "192.168.1.30"
 
+## Direccion IP de broadcast
+IP_BROADCAST  = "192.168.1.255"
+
+## Broadcast port
+PORT_BROADCAST = 6666
+
 ## Mascara de red
 NETMASK = "255.255.255.0"
 
@@ -207,7 +213,7 @@ class DistributedInterfaceProtocol:
 		server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		# Permitir broadcast
 		server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-		server.sendto(packetInfo, ('192.168.1.255', 6667))
+		server.sendto(packetInfo, (IP_BROADCAST, PORT_BROADCAST))
 
 	def sendIAmChampion(self, row1, row2, rowdata1, rowdata2):
 		packetFormat = '=1s 1s 1s'
@@ -233,7 +239,7 @@ class DistributedInterfaceProtocol:
 		server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		# Permitir broadcast
 		server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-		server.sendto(packetInfo, ('192.168.1.255', 6667))
+		server.sendto(packetInfo, (IP_BROADCAST, PORT_BROADCAST))
 	
 	def clearChampionshipQueues(self):
 		while not self.iWantToBeQueue.empty():
@@ -283,7 +289,7 @@ class DistributedInterfaceProtocol:
 		server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		# Permitir broadcast
 		server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-		server.sendto(packetData, ('192.168.1.255', 6667))
+		server.sendto(packetData, (IP_BROADCAST, PORT_BROADCAST))
 
 	def savePage(self):
 		## Proteger con mutex.
@@ -400,7 +406,7 @@ class DistributedInterfaceProtocol:
 				if(not self.waitingToSendToML):
 					self.kappa.acquire()
 					call( [ "sudo", "ip", "addr", "flush", "dev", "eno1"]  )
-					call( ["ip", "a", "add", IDIP + "/" + NETMASK, "dev", "eno1"]  )
+					call( ["ip", "a", "add", IDIP + "/" + NETMASK, "broadcast", "192.168.1.255" , "dev", "eno1"]  )
 					s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 					host = IDIP 
 					port = 6021
@@ -512,7 +518,7 @@ class DistributedInterfaceProtocol:
 		client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) # UDP
 		client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
 		client.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-		client.bind(('', 6667)) #Cambiar puerto
+		client.bind(('', PORT_BROADCAST)) #Cambiar puerto
 		while True:
 			packetStruct = struct.Struct('=1s')
 			data = None

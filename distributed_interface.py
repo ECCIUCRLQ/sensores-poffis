@@ -165,7 +165,7 @@ class DistributedInterface:
 
 	def sendKeepAlivesToIDs(self):
 		while(True):
-			sleep(0.5)
+			sleep(2)
 			self.lock.acquire()
 			self.messenger.sendKeepAlive(self.pageTable,self.changesInPageTable,self.nodeTable,self.changesInNodeTable)
 			
