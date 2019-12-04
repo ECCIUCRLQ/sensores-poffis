@@ -549,7 +549,8 @@ class DistributedInterfaceProtocol:
 			data = None
 			data,adrr = client.recvfrom(700000) #Agregar este conection en la clase
 			kappa = adrr
-			ip = ni.ifaddresses("eno1")[ni.AF_INET][0]['addr']
+			#ip = ni.ifaddresses("eno1")[ni.AF_INET][0]['addr'] #USAR EN LA U
+			ip = ni.ifaddresses("enp0s3")[ni.AF_INET][0]['addr'] #USAR EN LAS MÁQUINAS VIRTUALES
 			#print (ip)
 			if(data and not (adrr[0] == ip)):
 				unpackedData = list(packetStruct.unpack(data[:1]))
@@ -583,13 +584,13 @@ class DistributedInterfaceProtocol:
 					for x in range (3,((pageTableSize*2)+3),2):
 						pageID = struct.unpack('>H',b'\x00' + unpackedData[x] )[0]
 						nodeID = struct.unpack('>H',b'\x00' + unpackedData[x+1] )[0]
-						pageTableInfo.append({pageID,nodeID})
+						pageTableInfo.append((pageID,nodeID))
 						nodeTableStart = x+2
 					for x in range(nodeTableStart,nodeTableStart + (nodeTableSize * 3),3):
 						nodeID =  struct.unpack('>H',b'\x00' + unpackedData[x] )[0]
 						IP = str(ipaddress.IPv4Address(unpackedData[x+1]))
 						spaceAvailable = unpackedData[x+2]
-						nodeTableInfo.append({nodeID,IP,spaceAvailable})
+						nodeTableInfo.append((nodeID,IP,spaceAvailable))
 					#Meter en cola de IAMACTIVE -> {tamaño tabla de páginas, tamaño tabla de nodos, tabla de pagina, tabla de nodo}
 					datalist = []
 					datalist.append(pageTableInfo)
@@ -605,26 +606,29 @@ class DistributedInterfaceProtocol:
 					nodeTableSize = struct.unpack('>H',b'\x00' + unpackedData[2] )[0]
 					for x in range(0,pageTableSize):
 						packetFormat = packetFormat + '1s 1s'
-					for x in range(0,pageTableSize):
+					for x in range(0,nodeTableSize):
 						packetFormat = packetFormat + '1s I I'
 					packetStruct = struct.Struct(packetFormat)
 					unpackedData = list(packetStruct.unpack(data))
 					pageTableInfo = []
 					nodeTableInfo = []
-					nodeTableStart = 0
+					nodeTableStart = 3
 					for x in range (3,((pageTableSize*2)+3),2):
 						pageID = struct.unpack('>H',b'\x00' + unpackedData[x] )[0]
 						nodeID = struct.unpack('>H',b'\x00' + unpackedData[x+1] )[0]
-						pageTableInfo.append({pageID,nodeID})
+						pageTableInfo.append((pageID,nodeID))
 						nodeTableStart = x+2
 					for x in range(nodeTableStart,nodeTableStart + (nodeTableSize * 3),3):
 						nodeID =  struct.unpack('>H',b'\x00' + unpackedData[x] )[0]
 						IP = str(ipaddress.IPv4Address(unpackedData[x+1]))
 						spaceAvailable = unpackedData[x+2]
-						nodeTableInfo.append({nodeID,IP,spaceAvailable})
+						nodeTableInfo.append((nodeID,IP,spaceAvailable))
 
 					#Meter en cola de KEEPALIVE -> {tabla de pagina, tabla de nodo}
-					self.keepAliveQueue.put((pageTableInfo,nodeTableInfo))
+					datalist = []
+					datalist.append(pageTableInfo)
+					datalist.append(nodeTableInfo)
+					self.keepAliveQueue.put(datalist)
 
 
 

@@ -65,7 +65,10 @@ class DistributedInterface:
 			if(tablesReceived != None):
 				#Se actualizan tablas según tablesReceived
 				self.updateTables(tablesReceived)
-
+				print("Ya estoy al día con las tablas")
+				#print("actualicé tablas")
+				#print(self.nodeTable)
+				#print(self.pageTable)
 			while not self.messenger.iAmIDActive:
 				timeout = time.time() + 2
 				while(time.time() < timeout):
@@ -74,6 +77,8 @@ class DistributedInterface:
 						if(not tablesReceived == None):
 							#Actualizar tablas
 							self.updateTables(tablesReceived)
+							#print("actualicé tablas")
+							
 						timeout = time.time() + 2
 				self.messenger.iAmIDActive,tablesReceived = self.messenger.champions(False)
 			self.messenger.runActive()
@@ -143,14 +148,13 @@ class DistributedInterface:
 		self.lock.release()
 
 	def updateTables(self, tablesReceived):
-		self.lock.acquire()
 		assert(not (tablesReceived == None))
 		for x in range (0,len(tablesReceived[0])): #Lista con cambios a la page table
 			self.updatePageTable(tablesReceived[0][x][0],tablesReceived[0][x][1])
 
 		for x in range (0,len(tablesReceived[1])): #Lista con cambios en la node table
 			self.updateNodeTable(tablesReceived[1][x][0],tablesReceived[1][x][1],tablesReceived[1][x][2])
-		self.lock.release()
+
 
 
 	# First fit.
