@@ -83,7 +83,7 @@ class DistributedMemoryProtocol:
                 self.requestInfoToNode.release()                 
                 self.infoAlreadyAvailable.acquire()
                 infoSize = len(self.pageInfo)
-                packetFormat = '1s 1s'
+                packetFormat = '=1s 1s'
                 print("Page info:" , self.pageInfo)
                 for x in range (1,infoSize):
                     packetFormat = packetFormat + ' I'
@@ -113,7 +113,7 @@ class DistributedMemoryProtocol:
                 self.sendInfoToNode.release()  
                 self.infoSetInNode.acquire()
                 packet = []
-                packetStruct = struct.Struct('1s 1s I')
+                packetStruct = struct.Struct('=1s 1s I')
                 packet.append(bytearray([OK]))
                 packet.append(bytearray([pageReceived[0]]))
                 packet.append(self.nodeCurrentMemory)
@@ -129,7 +129,7 @@ class DistributedMemoryProtocol:
     def sendRegisterSignal(self,spaceAvailable):
         while True:
             packet = []
-            packetStruct = struct.Struct('1s I')
+            packetStruct = struct.Struct('=1s I')
             packet.append(bytearray([IAMHERE]))
             packet.append(spaceAvailable)
             packetInfo = packetStruct.pack( * ( tuple(packet) ) )
@@ -165,7 +165,7 @@ class DistributedMemoryProtocol:
                 s.bind((IPID,port))
                 s.listen(1)
                 self.socket,addr = s.accept()
-                packetStruct = struct.Struct('1s')
+                packetStruct = struct.Struct('=1s')
                 try:
                     data = self.socket.recv(700000)
                 except socket.error:
@@ -176,9 +176,9 @@ class DistributedMemoryProtocol:
                     unpackedData = list(packetStruct.unpack(data[:1]))
                     operationCode =  struct.unpack('>H',b'\x00' + unpackedData[0] )[0]
                     if(operationCode == SAVE_PAGE):
-                        packetFormat = '1s 1s I'
+                        packetFormat = '=1s 1s I'
                         packetStruct = struct.Struct(packetFormat)
-                        unpackedData = list(packetStruct.unpack(data[:8]))
+                        unpackedData = list(packetStruct.unpack(data[:6]))
                         size = unpackedData[2]
                         for x in range(0,size//4):
                             packetFormat = packetFormat + ' I'
@@ -192,7 +192,7 @@ class DistributedMemoryProtocol:
                             dataReceived.append(unpackedData[x])
                         self.receivePageFromInterface.put(dataReceived)
                     elif(operationCode == REQUEST_PAGE):
-                        packetStruct = struct.Struct('1s 1s')
+                        packetStruct = struct.Struct('=1s 1s')
                         unpackedData = list(packetStruct.unpack(data[:2]))
                         page = struct.unpack('>H',b'\x00' + unpackedData[1] )[0]
                         self.sendToInterfaceRequest.put(page)

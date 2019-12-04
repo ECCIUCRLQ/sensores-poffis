@@ -1,4 +1,3 @@
-
 from distributed_interface_protocol import DistributedInterfaceProtocol
 import struct
 import threading
@@ -37,6 +36,7 @@ class DistributedInterface:
 		self.nodeTable = [None]*MAX_NODE_COUNT
 		self.changesInPageTable = [False]*MAX_PAGE_COUNT
 		self.changesInNodeTable = [False]*MAX_NODE_COUNT
+
 		## La primera columna indica el número de página (coincide con número de fila) y la segunda columna el id del nodo 
 		## donde se encuentra guardada, con -1 se indica que la página aún no ha sido almacenada en ningún nodo (está en memoria local).
 		for row in range(0, MAX_PAGE_COUNT):
@@ -125,14 +125,12 @@ class DistributedInterface:
 		nodes = 0
 		while True:
 			if(not self.messenger.newNodes.empty()):
-				
 				nodeInfo = self.messenger.newNodes.get()
 				size = nodeInfo[0]
 				Ip = nodeInfo[1]
 				self.updateNodeTable(nodes,Ip,size)
 				nodes = nodes + 1
-				print(Ip)
-		
+				print("Distributed Interface: Registred node with IP " + str(Ip))
 		
 	def updatePageTable(self, pageId, nodeId):
 		self.lock.acquire()
@@ -155,8 +153,6 @@ class DistributedInterface:
 		for x in range (0,len(tablesReceived[1])): #Lista con cambios en la node table
 			self.updateNodeTable(tablesReceived[1][x][0],tablesReceived[1][x][1],tablesReceived[1][x][2])
 
-
-
 	# First fit.
 	def selectNode(self, pageSize, pageId):
 		assignedNode = -1
@@ -164,8 +160,7 @@ class DistributedInterface:
 			if(row[AVAILABLE_SPACE] >= pageSize):
 				assignedNode = row[NODE_ID_T]  
 				self.updatePageTable(pageId, row[NODE_ID_T])
-				break
-				
+				break	
 		return assignedNode 
 
 	def sendKeepAlivesToIDs(self):
@@ -173,6 +168,7 @@ class DistributedInterface:
 			sleep(0.5)
 			self.lock.acquire()
 			self.messenger.sendKeepAlive(self.pageTable,self.changesInPageTable,self.nodeTable,self.changesInNodeTable)
+			
 			for x in range (0,MAX_PAGE_COUNT):
 				self.changesInPageTable[x] = False
 
@@ -180,6 +176,7 @@ class DistributedInterface:
 				self.changesInNodeTable[x] = False
 
 			if(not (self.messenger.iWantToBeQueue.empty())):
+				self.messenger.iWantToBeQueue.get()
 				self.sendIAmActiveToIDs()
 
 			self.lock.release()

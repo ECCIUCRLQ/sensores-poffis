@@ -83,7 +83,7 @@ class LocalMemoryProtocol:
 				packet = []
 				for x in range(1, DATA_COUNT + 1):
 					page[x-1] = pageRequest[x]
-				packetFormat = '1s 1s I '
+				packetFormat = '=1s 1s I '
 				for x in range(0, DATA_COUNT):
 					packetFormat = packetFormat + 'I'
 
@@ -140,7 +140,7 @@ class LocalMemoryProtocol:
 		while True:
 			if( not self.requestedPages.empty() ):
 				pageToRequest = self.requestedPages.get()
-				packetStruct = struct.Struct('1s 1s')
+				packetStruct = struct.Struct('=1s 1s')
 				packet = bytearray([REQUEST_PAGE]), bytearray([pageToRequest])
 				packetData = packetStruct.pack(*(packet))
 				#Crear Socket
@@ -191,11 +191,11 @@ class LocalMemoryProtocol:
 						data = False
 				if(data):
 					#print(data)
-					packetStruct = struct.Struct('1s')
+					packetStruct = struct.Struct('=1s')
 					unpackedData = list(packetStruct.unpack(data[:1]))
 					operationCode =  struct.unpack('>H',b'\x00' + unpackedData[0] )[0]
 					if(operationCode == 2 or operationCode == 4):
-						packetStruct = struct.Struct('1s 1s')
+						packetStruct = struct.Struct('=1s 1s')
 						unpackedData = list(packetStruct.unpack(data[:2]))
 						typeOk = struct.unpack('>H',b'\x00' + unpackedData[0])[0]
 						pageID = struct.unpack('>H',b'\x00' + unpackedData[1])[0]
@@ -205,7 +205,7 @@ class LocalMemoryProtocol:
 						data.append(pageID)
 						self.ok.put(data)
 					elif(operationCode == 3):
-						packetFormat = '1s 1s'
+						packetFormat = '=1s 1s'
 						#size = unpackedData[2]
 						for x in range(0,DATA_COUNT):
 							packetFormat = packetFormat + ' I'
