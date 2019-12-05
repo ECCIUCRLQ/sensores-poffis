@@ -410,7 +410,7 @@ class DistributedInterfaceProtocol:
 				if(not self.waitingToSendToML):
 					self.kappa.acquire()
 					call( [ "sudo", "ip", "addr", "flush", "dev", "eno1"]  )
-					call( ["ip", "a", "add", IDIP + "/" + NETMASK, "broadcast", "192.168.1.255" , "dev", "eno1"]  )
+					call( ["ip", "a", "add", IP + "/" + NETMASK, "broadcast", "192.168.1.255" , "dev", "eno1"]  )
 					s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 					s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
 					s.bind( (IP , PORT_LOCAL_MEM_ID ) )
