@@ -157,7 +157,7 @@ class DistributedInterfaceProtocol:
 				messageFromOtherID = self.iWantToBeQueue.get()
 				# Compara la ronda, si es igual si juega
 				if(messageFromOtherID[1] == round):
-					print("llegó un competidor con ronda:" + str(messageFromOtherID[1]))
+					print("Llegó un competidor con ronda:" + str(messageFromOtherID[1]))
 					#Si el mayor el MAC entonces pierdo
 					if( messageFromOtherID[0] > self.MACAdress ):
 						print ("Perdí contra otra MAC, mi MAC es: " + str(self.MACAdress) + " y la que me ganó es: " + str(messageFromOtherID[0]))
@@ -169,14 +169,14 @@ class DistributedInterfaceProtocol:
 						self.sendIWantToBeChampion(round)
 					#Si son iguales hay error
 					else:
-						print ("Error: Champions: Two interfaces with the same MAC address")
+						print ("Error: Dos interfaces con la misma direccion MAC")
 
 				# Si es menor la ronda lo ignoro
 				elif(messageFromOtherID[1] < round):
-					print("llegó un competidor con ronda menor: "+ str(messageFromOtherID[1]) + " lo ignoro porque mi ronda es: " + str(round))
+					print("Llegó un competidor con ronda menor: "+ str(messageFromOtherID[1]) + ", lo ignoro porque mi ronda es: " + str(round))
 				# Si la ronda es mayor pierdo
 				elif(messageFromOtherID[1] > round):
-					print("llegó un competidor con ronda mayor: "+ str(messageFromOtherID[1]) + " perdí :( porque mi ronda es:" + str(round))
+					print("Llegó un competidor con ronda mayor: "+ str(messageFromOtherID[1]) + ", perdí porque mi ronda es:" + str(round))
 					alive = False
 			#Si me llega un soy compeón
 			if(not self.iAmChampionQueue.empty()):
@@ -188,16 +188,16 @@ class DistributedInterfaceProtocol:
 
 		#Si estoy vivo enviar soy campeón y esperar un segundo por si llega otro soy campeón
 		if(alive):
-			print("gané")
+			print("Yo soy campeón, mi MAC es:" + str(self.MACAdress) )
 			self.sendIAmChampion(0,0,0,0)
 			#Si llega otro soy campeón envío un quiero ser campeón
 			timeout = time.time() + 1
 			while(time.time() < timeout):
 				if(not self.iAmChampionQueue.empty()):
 						kappa = self.iAmChampionQueue.get()
-						print("Me toca darme de putazos")
+						print("Vamos a tiempos extras.")
 		else:
-			print("perdí")
+			print("Perdí, mi dirección MAC es:", str(self.MACAdress) )
 			#Quedarme esperando el IAmChampion por 5 segundos
 			timeout = time.time() + 5
 			thereIsAWinner = False
