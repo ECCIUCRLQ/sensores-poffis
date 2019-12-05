@@ -34,14 +34,21 @@ DATA_SIZE = 4
 ## Number of integers peer page.
 DATA_COUNT = PAGE_SIZE // DATA_SIZE
 
-## Direccion IP 
-IDIP  = "192.168.1.30"
+## Direccion IP
+IP  = "192.168.1.30"
 
 ## Direccion IP de broadcast
 IP_BROADCAST  = "192.168.1.255"
 
 ## Broadcast port
 PORT_BROADCAST = 6666
+
+## Puerto
+PORT_LOCAL_MEM_ID = 2000
+
+PORT_BROADCAST_REGISTER = 5000
+
+PORT_ID_NODE = 3114
 
 ## Mascara de red
 NETMASK = "255.255.255.0"
@@ -163,17 +170,17 @@ class DistributedInterfaceProtocol:
 					#Si son iguales hay error
 					else:
 						print ("Error: Champions: Two interfaces with the same MAC address")
-					
+
 				# Si es menor la ronda lo ignoro
 				elif(messageFromOtherID[1] < round):
 					print("llegó un competidor con ronda menor: "+ str(messageFromOtherID[1]) + " lo ignoro porque mi ronda es: " + str(round))
-				# Si la ronda es mayor pierdo 
+				# Si la ronda es mayor pierdo
 				elif(messageFromOtherID[1] > round):
-					print("llegó un competidor con ronda mayor: "+ str(messageFromOtherID[1]) + " perdí :( porque mi ronda es:" + str(round)) 
+					print("llegó un competidor con ronda mayor: "+ str(messageFromOtherID[1]) + " perdí :( porque mi ronda es:" + str(round))
 					alive = False
 			#Si me llega un soy compeón
 			if(not self.iAmChampionQueue.empty()):
-				#RECORDAR AGARRAR LOS DATOS PARA LAS TABLAS	
+				#RECORDAR AGARRAR LOS DATOS PARA LAS TABLAS
 				tablesReceived = self.iAmChampionQueue.get()
 				self.iAmChampionQueue.put(tablesReceived)
 				#Piedo automáticamente
@@ -200,13 +207,12 @@ class DistributedInterfaceProtocol:
 					thereIsAWinner = True
 			if(not thereIsAWinner):
 				return self.champions(firstTime)
-			
+
 		return alive,tablesReceived
-		
+
 	def sendIWantToBeChampion(self, round):
 		bytesMACAdrress = self.MACAdress.to_bytes(6,byteorder = "little")
 		packet = (bytearray([IWANTTOBE]),bytearray([bytesMACAdrress[0],bytesMACAdrress[1],bytesMACAdrress[2],bytesMACAdrress[3],bytesMACAdrress[4],bytesMACAdrress[5]]),bytearray([round]))
-		print(packet)
 		packetStruct = struct.Struct('=1s 6s 1s')
 		packetInfo = packetStruct.pack(*(packet))
 		server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) # UDP
@@ -240,7 +246,7 @@ class DistributedInterfaceProtocol:
 		# Permitir broadcast
 		server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 		server.sendto(packetInfo, (IP_BROADCAST, PORT_BROADCAST))
-	
+
 	def clearChampionshipQueues(self):
 		while not self.iWantToBeQueue.empty():
 			self.iWantToBeQueue.get()
@@ -321,11 +327,10 @@ class DistributedInterfaceProtocol:
 				pageToSend = packetStruct.pack(*(tuple(packet)))
 				self.kappa2.acquire()
 				self.socketMD = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-				port = 6000
 				connected = False
 				while not connected:
 					try:
-						self.socketMD.connect( ( self.ipCurrentNode, port ) )
+						self.socketMD.connect( ( self.ipCurrentNode, PORT_ID_NODE ) )
 						connected = True
 					except socket.error:
 						print( "Error: savePage(): Could not establish connection with node")
@@ -375,11 +380,10 @@ class DistributedInterfaceProtocol:
 				packet.append(bytearray([pageToRequest]))
 				packetData = packetStruct.pack(*(tuple(packet)))
 				self.socketMD = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-				port = 6000
 				connected = False
 				while not connected:
 					try:
-						self.socketMD.connect( ( self.ipCurrentNode, port ) )
+						self.socketMD.connect( ( self.ipCurrentNode, PORT_ID_NODE ) )
 						connected = True
 					except socket.error:
 						print( "Error: requestPage(): Could not establish connection with node")
@@ -399,7 +403,7 @@ class DistributedInterfaceProtocol:
 				self.kappa.release()
 				self.waitingToSendToML = False
 
-	def classifyPacketsFromML(self): ## Desempaquetar solo para verificar códigos de operación, en las colas deben guardarse como vienen.	
+	def classifyPacketsFromML(self): ## Desempaquetar solo para verificar códigos de operación, en las colas deben guardarse como vienen.
 		while True:
 			packetStruct = struct.Struct('=1s')
 			while True:
@@ -408,10 +412,8 @@ class DistributedInterfaceProtocol:
 					call( [ "sudo", "ip", "addr", "flush", "dev", "eno1"]  )
 					call( ["ip", "a", "add", IDIP + "/" + NETMASK, "broadcast", "192.168.1.255" , "dev", "eno1"]  )
 					s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-					host = IDIP 
-					port = 6021
 					s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
-					s.bind( ( host, port ) )
+					s.bind( (IP , PORT_LOCAL_MEM_ID ) )
 					s.listen()
 					self.socketML,addr = s.accept()
 					data = self.socketML.recv(700000)
@@ -451,7 +453,7 @@ class DistributedInterfaceProtocol:
 						else:
 							print("Error: Invalid operation code received (" + str(operationCode) + ")")
 
-	def classifyPacketsFromMD(self): 
+	def classifyPacketsFromMD(self):
 		while True:
 			if(self.waitingForMD):
 				try:
@@ -469,7 +471,6 @@ class DistributedInterfaceProtocol:
 						pageID = struct.unpack('>H',b'\x00' + unpackedData[1])[0]
 						spaceAvailable = unpackedData[2]
 						data = []
-						print(pageID)
 						data.append(pageID)
 						data.append(spaceAvailable)
 						self.ok.put(data)
@@ -499,7 +500,7 @@ class DistributedInterfaceProtocol:
 		client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) # UDP
 		client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
 		client.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-		client.bind(('', 2300))
+		client.bind(('', PORT_BROADCAST_REGISTER))
 		while True:
 			packetStruct = struct.Struct('=1s')
 			data = None
@@ -513,7 +514,7 @@ class DistributedInterfaceProtocol:
 					unpackedData = list(packetStruct.unpack(data))
 					self.newNodes.put((unpackedData[1],adrr[0]))
 					self.sendOk(adrr[0])
-		
+
 	def classifyPacketsFromBroadcastsFromID(self):
 		client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) # UDP
 		client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
@@ -524,9 +525,9 @@ class DistributedInterfaceProtocol:
 			data = None
 			data,adrr = client.recvfrom(700000) #Agregar este conection en la clase
 			kappa = adrr
-			ip = ni.ifaddresses("eno1")[ni.AF_INET][0]['addr'] #USAR EN LA U
-			#ip = ni.ifaddresses("enp0s3")[ni.AF_INET][0]['addr'] #USAR EN LAS MÁQUINAS VIRTUALES
-			if(data and not (adrr[0] == ip)):
+			selfIp = ni.ifaddresses("eno1")[ni.AF_INET][0]['addr'] #USAR EN LA U
+			# selfIp = ni.ifaddresses("enp0s3")[ni.AF_INET][0]['addr'] #USAR EN LAS MÁQUINAS VIRTUALES
+			if(data and not (adrr[0] == selfIp)):
 				unpackedData = list(packetStruct.unpack(data[:1]))
 				operationCode =  struct.unpack('>H',b'\x00' + unpackedData[0] )[0]
 				if(operationCode == IWANTTOBE):
@@ -594,9 +595,9 @@ class DistributedInterfaceProtocol:
 						nodeTableStart = x+2
 					for x in range(nodeTableStart,nodeTableStart + (nodeTableSize * 3),3):
 						nodeID =  struct.unpack('>H',b'\x00' + unpackedData[x] )[0]
-						IP = str(ipaddress.IPv4Address(unpackedData[x+1]))
+						ipNode = str(ipaddress.IPv4Address(unpackedData[x+1]))
 						spaceAvailable = unpackedData[x+2]
-						nodeTableInfo.append((nodeID,IP,spaceAvailable))
+						nodeTableInfo.append((nodeID,ipNode,spaceAvailable))
 
 					#Meter en cola de KEEPALIVE -> {tabla de pagina, tabla de nodo}
 					datalist = []
@@ -607,13 +608,11 @@ class DistributedInterfaceProtocol:
 
 	def sendOk(self,adrr):
 		self.socketMD = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		port = 6000
 		connected = False
 		while not connected:
 			try:
-				self.socketMD.connect( ( adrr, port ) )
+				self.socketMD.connect( ( adrr, PORT_ID_NODE ) )
 				connected = True
-				#print( "connection successful" )
 			except socket.error:
 				print( "no Node" )  #No debería de pasar
 				sleep( 2 )

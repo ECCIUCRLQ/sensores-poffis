@@ -4,14 +4,13 @@ import threading
 import time
 import socket
 from time import sleep
+
 ## Operation codes.
 SAVE_PAGE = 0
 REQUEST_PAGE = 1
-
 OK = 2
 SEND = 3
 ERROR = 4
-
 
 ## Queue size.
 QUEUE_SIZE = 10000
@@ -25,6 +24,12 @@ DATA_SIZE = 4
 ## Number of integers peer page.
 #DATA_COUNT = PAGE_SIZE // DATA_SIZE
 DATA_COUNT = 10
+
+# Direccion ip
+LOCAL_IP = "192.168.1.30"
+
+# Puerto
+PORT = 2000
 
 class LocalMemoryProtocol:
 	#packets = None
@@ -56,10 +61,7 @@ class LocalMemoryProtocol:
 		self.socket = None
 		self.waitingAnswerFromID = False
 
-
-
 	def run(self):
-
 		classifier = threading.Thread(target = self.classifyPackets)
 		requester = threading.Thread(target = self.requestPage)
 		saver = threading.Thread(target = self.savePage)
@@ -94,20 +96,16 @@ class LocalMemoryProtocol:
 
 				for x in range(0, DATA_COUNT):
 					packet.append(page[x])
-				#print(packet)
-				#print(packetStruct.pack( * ( tuple(packet) ) ) )
 				#Crear Socket
 				self.kappa.acquire()
-				
+
 				self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-				IPIDLocal = '192.168.1.30' #Cambiar
-				port = 6021
 				connected = False
 				packetData = packetStruct.pack( * ( tuple(packet) ) )
 				while not connected:
 					try:
 						connected = True
-						self.socket.connect( ( IPIDLocal, port ) )
+						self.socket.connect( ( LOCAL_IP, PORT ) )
 						print('socket created')
 						#print( "connection successful" )
 						self.socket.send(packetData)
@@ -115,8 +113,8 @@ class LocalMemoryProtocol:
 						connected = False
 						print( "no ID" )
 						sleep( 2 )
-				
-				
+
+
 				a = a+1
 				print ("se envio" + str(a - 1))
 				self.waitingAnswerFromID = True
@@ -125,7 +123,6 @@ class LocalMemoryProtocol:
 					if(self.ok.empty()):
 						if(time.time() > timeout):
 							self.pagesToSave.put(pageRequest)
-							print ('KAPPA')
 							self.waitingAnswerFromID = False
 							#recordar cerrar socket
 							break
@@ -146,12 +143,10 @@ class LocalMemoryProtocol:
 				#Crear Socket
 				self.kappa.acquire()
 				self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-				IPIDLocal = '192.168.1.30' #Cambiar
-				port = 6021
 				connected = False
 				while not connected:
 					try:
-						self.socket.connect( ( IPIDLocal, port ) )
+						self.socket.connect( ( LOCAL_IP, PORT ) )
 						connected = True
 						print('socket created')
 						#print( "connection successful" )
@@ -183,14 +178,12 @@ class LocalMemoryProtocol:
 					#sleep(1)
 					try:
 						data = self.socket.recvfrom(700000)[0]
-						#print(data)
 						break
 					except socket.error:
 						print("Connection lost with ID when waiting a message")
 						sleep(1)
 						data = False
 				if(data):
-					#print(data)
 					packetStruct = struct.Struct('=1s')
 					unpackedData = list(packetStruct.unpack(data[:1]))
 					operationCode =  struct.unpack('>H',b'\x00' + unpackedData[0] )[0]
@@ -206,7 +199,6 @@ class LocalMemoryProtocol:
 						self.ok.put(data)
 					elif(operationCode == 3):
 						packetFormat = '=1s 1s'
-						#size = unpackedData[2]
 						for x in range(0,DATA_COUNT):
 							packetFormat = packetFormat + ' I'
 						packetStruct = struct.Struct(packetFormat)
